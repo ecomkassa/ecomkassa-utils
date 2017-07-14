@@ -1,0 +1,26 @@
+version: '2'
+services:
+  mongo:
+    image: "mongo:3.5.10"
+    ports:
+     - "27017:27017"
+    volumes:
+     - /var/docker/data/mongo/:/data/db
+  backend:
+    image: "com.thepointmoscow/backend:latest"
+    links:
+     - mongo
+    ports:
+     - "9000:9000"
+     - "9443:9443"
+    environment:
+     - MONGODB_URI=mongodb://mongo:27017/test
+     - PLAY_CRYPTO_SECRET=abcdefghijk
+  migrator:
+    image: "com.thepointmoscow/mongodb-migrator:latest"
+    links:
+     - mongo
+    environment:
+     - SPRING_DATA_MONGODB_HOST=mongo
+     - SPRING_DATA_MONGODB_DATABASE=test
+     - SPRING_DATA_MONGODB_PORT=27017
