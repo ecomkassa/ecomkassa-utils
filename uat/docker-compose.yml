@@ -7,7 +7,7 @@ services:
     volumes:
      - /var/docker/data/mongo/:/data/db
   backend:
-    image: "com.thepointmoscow/backend:latest"
+    image: "unlocker/mobilepos-backend:latest"
     links:
      - mongo
     ports:
@@ -17,7 +17,7 @@ services:
      - MONGODB_URI=mongodb://mongo:27017/test
      - PLAY_CRYPTO_SECRET=abcdefghijk
   migrator:
-    image: "com.thepointmoscow/mongodb-migrator:latest"
+    image: "unlocker/mobilepos-backend:MMM-latest"
     links:
      - mongo
     environment:
