@@ -1,4 +1,5 @@
 <changeFiles>
     <file path="v1_1__initial_data.js"/>
     <file path="v1_2__insert_firms.js"/>
+    <file path="v1_3__orders_preparation.js"/>
 </changeFiles>
