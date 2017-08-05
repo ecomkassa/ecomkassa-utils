@@ -16,11 +16,16 @@ services:
     environment:
      - MONGODB_URI=mongodb://mongo:27017/test
      - PLAY_CRYPTO_SECRET=abcdefghijk
+  items:
+      image: "unlocker/mobilepos-backend:ITEMS-latest"
+      environment:
+       - SERVER_PORT=8082
   migrator:
     image: "unlocker/mobilepos-backend:MMM-latest"
     links:
      - mongo
     environment:
+     - SERVER_PORT=8081
      - SPRING_DATA_MONGODB_HOST=mongo
      - SPRING_DATA_MONGODB_DATABASE=test
      - SPRING_DATA_MONGODB_PORT=27017
