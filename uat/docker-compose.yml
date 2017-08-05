@@ -16,10 +16,10 @@ services:
     environment:
      - MONGODB_URI=mongodb://mongo:27017/test
      - PLAY_CRYPTO_SECRET=abcdefghijk
-  items:
-      image: "unlocker/mobilepos-backend:ITEMS-latest"
-      ports:
-       - "8081:8080"
+#  items:
+#      image: "unlocker/mobilepos-backend:ITEMS-latest"
+#      ports:
+#       - "8081:8080"
   migrator:
     image: "unlocker/mobilepos-backend:MMM-latest"
     links:
