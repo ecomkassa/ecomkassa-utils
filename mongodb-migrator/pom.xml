@@ -13,7 +13,7 @@
     <parent>
         <groupId>com.thepointmoscow</groupId>
         <artifactId>utilities</artifactId>
-        <version>0.0.2</version>
+        <version>0.0.3</version>
         <relativePath>./../pom.xml</relativePath>
     </parent>
 
@@ -59,7 +59,7 @@
                         <imageTag>${project.version}</imageTag>
                         <imageTag>latest</imageTag>
                     </imageTags>
-                    <dockerDirectory>src/main/docker</dockerDirectory>
+                    <dockerDirectory>${project.basedir}/src/main/docker</dockerDirectory>
                     <resources>
                         <resource>
                             <targetPath>/</targetPath>
