@@ -3,4 +3,5 @@
     <file path="v1_2__insert_firms.js"/>
     <file path="v1_3__orders_preparation.js"/>
     <file path="v1_4__stores.js"/>
+    <file path="v1_5__orders_electronic.js"/>
 </changeFiles>
