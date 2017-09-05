@@ -3,6 +3,7 @@ package ru.unlocker.mongodbmigrator;
 import com.mongodb.Mongo;
 import lombok.extern.slf4j.Slf4j;
 import org.mongeez.MongeezRunner;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.mongo.MongoProperties;
@@ -27,10 +28,15 @@ public class MongodbMigratorApplication {
         MongeezRunner runner = new MongeezRunner();
         runner.setMongo(mongo);
         runner.setDbName(props.getDatabase());
+        runner.setUserName(props.getUsername());
+        runner.setPassWord(passWord);
         runner.setExecuteEnabled(true);
         runner.setFile(new ClassPathResource("db/mongeez.xml"));
         return runner;
     }
+
+    @Value("${spring.data.mongodb.password}")
+    private String passWord;
 
     public static void main(String[] args) {
         try (ConfigurableApplicationContext ctx = SpringApplication.run(MongodbMigratorApplication.class, args)) {
