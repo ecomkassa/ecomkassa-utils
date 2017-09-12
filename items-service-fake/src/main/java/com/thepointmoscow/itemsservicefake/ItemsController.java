@@ -5,10 +5,17 @@ import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.activation.FileTypeMap;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +54,17 @@ public class ItemsController {
         final boolean success = (item != null && quantity <= 3);
         return ResponseEntity.ok(new RestResponse(success));
     }
+
+    @ApiOperation("Retrieves an item image")
+    @RequestMapping(value = "/{itemId}/image", method = RequestMethod.GET)
+    public ResponseEntity<byte[]> getItemImage(@PathVariable("itemId") String itemId)
+            throws IOException {
+
+        InputStream img = getClass().getResourceAsStream("/static/images/image_medium.jpg");
+        MediaType mediaType = MediaType.IMAGE_JPEG;
+        return ResponseEntity.ok().contentType(mediaType).body(IOUtils.toByteArray(img));
+    }
+
 
     @ApiOperation("Makes item search")
     @ApiImplicitParams({
