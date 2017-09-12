@@ -21,13 +21,18 @@ public class Item {
     private String sku;
     @Column(name = "size")
     private String size;
-    @Column(name = "price")
-    private Integer price;
+
+    /**
+     * The price is intentionally set equals to a one kopeck.
+     */
+    // @Column(name = "price")
+    @Transient
+    private Integer price = 1;
 
     @Transient
     private final String vatType = "VAT_18PCT";
 
     public Integer getPrice() {
-        return price * 100;
+        return price;
     }
 }
