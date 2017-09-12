@@ -4,4 +4,5 @@
     <file path="v1_3__orders_preparation.js"/>
     <file path="v1_4__stores.js"/>
     <file path="v1_5__orders_electronic.js"/>
+    <file path="v1_6__login_unique.js"/>
 </changeFiles>

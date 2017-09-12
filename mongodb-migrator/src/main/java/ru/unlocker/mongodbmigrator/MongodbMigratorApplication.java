@@ -10,7 +10,6 @@ import org.springframework.boot.autoconfigure.mongo.MongoProperties;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 
 @SpringBootApplication
 @Slf4j
@@ -29,14 +28,14 @@ public class MongodbMigratorApplication {
         runner.setMongo(mongo);
         runner.setDbName(props.getDatabase());
         runner.setUserName(props.getUsername());
-        runner.setPassWord(passWord);
+        runner.setPassWord(password);
         runner.setExecuteEnabled(true);
         runner.setFile(new ClassPathResource("db/mongeez.xml"));
         return runner;
     }
 
-    @Value("${spring.data.mongodb.password}")
-    private String passWord;
+    @Value("${spring.data.mongodb.password:}")
+    private String password;
 
     public static void main(String[] args) {
         try (ConfigurableApplicationContext ctx = SpringApplication.run(MongodbMigratorApplication.class, args)) {
