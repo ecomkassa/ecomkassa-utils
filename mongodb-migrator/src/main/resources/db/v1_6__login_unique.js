@@ -1,6 +1,6 @@
 //mongeez formatted javascript
 //changeset unlocker:v1_6
-db.silhouette.user.createIndex({
+db.silhouette.user.ensureIndex({
         "loginInfo.providerKey" : 1,
         "loginInfo.providerID" : 1
 	}, {
