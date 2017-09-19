@@ -1,23 +1,39 @@
 package com.thepointmoscow.frws.qkkm;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.thepointmoscow.frws.FiscalGateway;
 import com.thepointmoscow.frws.RegistrationIssue;
 import com.thepointmoscow.frws.RegistrationResult;
 import com.thepointmoscow.frws.StatusResult;
+import com.thepointmoscow.frws.qkkm.requests.DeviceStatusRequest;
+import com.thepointmoscow.frws.qkkm.requests.QkkmRequest;
+import com.thepointmoscow.frws.qkkm.responses.DeviceStatusResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Objects;
+
+import static java.time.format.DateTimeFormatter.ofPattern;
 
 /**
  * A fiscal gateway based on QKKM server.
  */
 @Component
+@Slf4j
 public class QkkmFiscalGateway implements FiscalGateway {
 
     private static final Charset CHARSET = Charset.forName("UTF-8");
+    @Value("${qkkm.server.host}")
     private String host;
+    @Value("${qkkm.server.port}")
     private int port;
 
     /**
@@ -36,6 +52,21 @@ public class QkkmFiscalGateway implements FiscalGateway {
         }
     }
 
+    /**
+     * Executes command with a fiscal registrar.
+     *
+     * @param request      request object
+     * @param responseType response type
+     * @param <RESP>       response type
+     * @return response object
+     * @throws IOException possibly IO exception
+     */
+    private <RESP> RESP executeCommand(QkkmRequest request, Class<RESP> responseType) throws IOException {
+        XmlMapper mapper = new XmlMapper();
+        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        String raw = executeCommand(mapper.writeValueAsString(request));
+        return mapper.readValue(raw, responseType);
+    }
 
     @Override
     public RegistrationResult register(RegistrationIssue issue) {
@@ -44,6 +75,33 @@ public class QkkmFiscalGateway implements FiscalGateway {
 
     @Override
     public StatusResult status() {
-        throw new UnsupportedOperationException("status");
+        StatusResult result = new StatusResult();
+        try {
+            DeviceStatusResponse dsr = executeCommand(new DeviceStatusRequest(), DeviceStatusResponse.class);
+            if (!Objects.equals(dsr.getError().getId(), 0)) {
+                return result
+                        .setStatusMessage(dsr.getError().getText())
+                        .setOnline(false)
+                        .setErrorCode(dsr.getError().getId());
+            }
+            DeviceStatusResponse.DeviceStatus ds = dsr.getStatus();
+            result.setOnline("1".equals(ds.getIsOnline()))
+                    .setStatusMessage(ds.getStatusMessageHTML())
+                    .setCurrentDocNumber(ds.getCurrentDocNumber())
+                    .setCurrentSession(ds.getNumberLastClousedSession() + 1)
+                    .setErrorCode(ds.getDeviceErrorCode())
+                    .setInn(ds.getInn())
+                    .setSerialNumber(ds.getSerialNumber())
+                    .setModeFR(ds.getModeFR())
+                    .setSubModeFR(ds.getSubModeFR())
+                    .setFrDateTime(LocalDateTime.of(
+                            LocalDate.parse(ds.getDateFR(), ofPattern("yyyy.MM.dd")),
+                            LocalTime.parse(ds.getTimeFR(), ofPattern("HH:mm:ss"))
+                    ));
+        } catch (Exception e) {
+            log.error("Error while fetching a status of the fiscal registrar", e);
+            result.setStatusMessage(e.getMessage());
+        }
+        return result;
     }
 }

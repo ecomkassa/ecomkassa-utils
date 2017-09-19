@@ -70,15 +70,15 @@ class DeviceStatusResponseTest {
         DeviceStatusResponse.DeviceStatus status = actual.getStatus();
         assertNotNull(status);
         assertEquals("1", status.getIsOnline());
-        assertEquals("0", status.getDeviceErrorCode());
+        assertEquals(0, status.getDeviceErrorCode());
         assertEquals("2012.12.11", status.getDateFR());
         assertEquals("20:03:20", status.getTimeFR());
         assertEquals("88888888", status.getInn());
         assertEquals("123456", status.getSerialNumber());
-        assertEquals(284, (int) status.getCurrentDocNumber());
-        assertEquals(631, (int) status.getNumberLastClousedSession());
-        assertEquals(8, (byte) status.getModeFR());
-        assertEquals(0, (byte) status.getSubModeFR());
+        assertEquals(284, status.getCurrentDocNumber());
+        assertEquals(631, status.getNumberLastClousedSession());
+        assertEquals(8, status.getModeFR());
+        assertEquals(0, status.getSubModeFR());
         assertEquals("HTML-описание статуса", status.getStatusMessageHTML());
     }
 

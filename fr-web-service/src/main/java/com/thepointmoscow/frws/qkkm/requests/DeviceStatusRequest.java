@@ -6,7 +6,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-class DeviceStatusRequest extends QkkmRequest {
+public class DeviceStatusRequest extends QkkmRequest {
     @JacksonXmlProperty(localName = "GetDeviceStatus")
     private String cutCheck = null;
 }

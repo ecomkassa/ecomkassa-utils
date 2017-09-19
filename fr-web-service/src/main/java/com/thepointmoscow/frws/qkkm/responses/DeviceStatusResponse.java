@@ -15,7 +15,7 @@ public class DeviceStatusResponse extends QkkmResponse {
         @JacksonXmlProperty(isAttribute = true)
         private String isOnline;
         @JacksonXmlProperty(isAttribute = true)
-        private String deviceErrorCode;
+        private int deviceErrorCode;
         @JacksonXmlProperty(isAttribute = true)
         private String dateFR;
         @JacksonXmlProperty(isAttribute = true)
@@ -25,13 +25,13 @@ public class DeviceStatusResponse extends QkkmResponse {
         @JacksonXmlProperty(isAttribute = true)
         private String serialNumber;
         @JacksonXmlProperty(isAttribute = true)
-        private Integer currentDocNumber;
+        private int currentDocNumber;
         @JacksonXmlProperty(isAttribute = true)
-        private Integer numberLastClousedSession;
+        private int numberLastClousedSession;
         @JacksonXmlProperty(isAttribute = true)
-        private Byte modeFR;
+        private byte modeFR;
         @JacksonXmlProperty(isAttribute = true)
-        private Byte subModeFR;
+        private byte subModeFR;
         @JacksonXmlProperty(isAttribute = true)
         private String statusMessageHTML;
     }

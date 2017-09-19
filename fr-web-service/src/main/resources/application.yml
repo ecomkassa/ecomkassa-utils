@@ -6,3 +6,8 @@ management:
 
 logging:
   config: 'classpath:logback.xml'
+
+qkkm:
+  server:
+    host: '127.0.0.1'
+    port: 4545
