@@ -7,13 +7,13 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class CutCheckTest {
+class CutCheckRequestTest {
 
     @Test
     void shouldSerializeCommand() throws IOException {
         // GIVEN
         XmlMapper mapper = new XmlMapper();
-        QkkmRequest command = new CutCheck();
+        QkkmRequest command = new CutCheckRequest();
         // WHEN
         String result = mapper.writeValueAsString(command);
         // THEN

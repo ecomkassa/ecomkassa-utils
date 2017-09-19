@@ -6,7 +6,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-class CutCheck extends QkkmRequest {
-    @JacksonXmlProperty(localName = "CutCheck")
-    private String cutCheck = null;
+class ZReportRequest extends QkkmRequest {
+    @JacksonXmlProperty(localName = "ZReport")
+    private String command = null;
 }

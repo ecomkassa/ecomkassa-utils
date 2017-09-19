@@ -77,6 +77,9 @@ class DeviceStatusResponseTest {
         assertEquals("123456", status.getSerialNumber());
         assertEquals(284, (int) status.getCurrentDocNumber());
         assertEquals(631, (int) status.getNumberLastClousedSession());
+        assertEquals(8, (byte) status.getModeFR());
+        assertEquals(0, (byte) status.getSubModeFR());
+        assertEquals("HTML-описание статуса", status.getStatusMessageHTML());
     }
 
 

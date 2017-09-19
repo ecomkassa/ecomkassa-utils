@@ -28,6 +28,11 @@ public class DeviceStatusResponse extends QkkmResponse {
         private Integer currentDocNumber;
         @JacksonXmlProperty(isAttribute = true)
         private Integer numberLastClousedSession;
-
+        @JacksonXmlProperty(isAttribute = true)
+        private Byte modeFR;
+        @JacksonXmlProperty(isAttribute = true)
+        private Byte subModeFR;
+        @JacksonXmlProperty(isAttribute = true)
+        private String statusMessageHTML;
     }
 }
