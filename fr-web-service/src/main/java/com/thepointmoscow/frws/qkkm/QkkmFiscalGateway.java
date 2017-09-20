@@ -3,12 +3,15 @@ package com.thepointmoscow.frws.qkkm;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.thepointmoscow.frws.FiscalGateway;
-import com.thepointmoscow.frws.RegistrationIssue;
+import com.thepointmoscow.frws.Order;
 import com.thepointmoscow.frws.RegistrationResult;
 import com.thepointmoscow.frws.StatusResult;
 import com.thepointmoscow.frws.qkkm.requests.DeviceStatusRequest;
 import com.thepointmoscow.frws.qkkm.requests.QkkmRequest;
+import com.thepointmoscow.frws.qkkm.requests.XReportRequest;
+import com.thepointmoscow.frws.qkkm.requests.ZReportRequest;
 import com.thepointmoscow.frws.qkkm.responses.DeviceStatusResponse;
+import com.thepointmoscow.frws.qkkm.responses.QkkmResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -69,8 +72,23 @@ public class QkkmFiscalGateway implements FiscalGateway {
     }
 
     @Override
-    public RegistrationResult register(RegistrationIssue issue) {
+    public RegistrationResult register(Order order, Long issueID) {
         throw new UnsupportedOperationException("register");
+    }
+
+    @Override
+    public StatusResult closeSession() {
+        try {
+            executeCommand(new XReportRequest(), QkkmResponse.class);
+            executeCommand(new ZReportRequest(), QkkmResponse.class);
+            return status();
+        } catch (Exception e) {
+            log.error("An error occurred while closing session.", e);
+            return new StatusResult()
+                    .setErrorCode(-1)
+                    .setStatusMessage(e.getMessage());
+        }
+
     }
 
     @Override
@@ -100,6 +118,7 @@ public class QkkmFiscalGateway implements FiscalGateway {
                     ));
         } catch (Exception e) {
             log.error("Error while fetching a status of the fiscal registrar", e);
+            result.setErrorCode(-1);
             result.setStatusMessage(e.getMessage());
         }
         return result;

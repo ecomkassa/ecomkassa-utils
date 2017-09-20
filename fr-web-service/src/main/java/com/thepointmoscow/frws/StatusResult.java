@@ -8,6 +8,16 @@ import java.time.LocalDateTime;
 @Data
 @Accessors(chain = true)
 public class StatusResult {
+
+    public StatusResult() {
+        this("STATUS");
+    }
+
+    protected StatusResult(String type) {
+        this.type = type;
+    }
+
+    protected final String type;
     private boolean isOnline;
     private int errorCode;
     private LocalDateTime frDateTime;

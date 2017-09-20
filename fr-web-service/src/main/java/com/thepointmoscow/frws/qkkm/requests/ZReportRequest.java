@@ -6,7 +6,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-class ZReportRequest extends QkkmRequest {
+public class ZReportRequest extends QkkmRequest {
     @JacksonXmlProperty(localName = "ZReport")
     private String command = null;
 }

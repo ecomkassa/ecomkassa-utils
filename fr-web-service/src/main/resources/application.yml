@@ -1,13 +1,23 @@
 server:
   port: 8080
 
-management:
-  port: 8081
+#management:
+#  port: 8081
 
 logging:
   config: 'classpath:logback.xml'
+
+task:
+  delay: 30
 
 qkkm:
   server:
     host: '127.0.0.1'
     port: 4545
+
+backend:
+  server:
+    url: 'http://138.68.104.133:9000'
+    username: 'test@test.test'
+    password: 'test'
+    ccmID: ''
