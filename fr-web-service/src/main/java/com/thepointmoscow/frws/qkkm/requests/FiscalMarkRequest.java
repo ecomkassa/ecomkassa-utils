@@ -7,7 +7,8 @@ import lombok.experimental.Accessors;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-class FiscalMarkRequest extends QkkmRequest {
+@Accessors(chain = true)
+public class FiscalMarkRequest extends QkkmRequest {
     @JacksonXmlProperty(localName = "GetFiskalMarkById")
     private FiscalMark command;
 

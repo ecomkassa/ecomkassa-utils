@@ -19,15 +19,15 @@ public class CloseCheckRequest extends QkkmRequest {
         @JacksonXmlProperty(isAttribute = true, localName = "Text")
         private String text;
         @JacksonXmlProperty(isAttribute = true, localName = "SummaCash")
-        private int summaCash;
+        private long summaCash;
         @JacksonXmlProperty(isAttribute = true, localName = "Summa2")
-        private int summa2;
+        private long summa2;
         @JacksonXmlProperty(isAttribute = true, localName = "Summa3")
-        private int summa3;
+        private long summa3;
         @JacksonXmlProperty(isAttribute = true, localName = "Summa4")
-        private int summa4;
+        private long summa4;
         @JacksonXmlProperty(isAttribute = true, localName = "Discount")
-        private int discount;
+        private long discount;
         @JacksonXmlProperty(isAttribute = true, localName = "Tax1")
         private int tax1;
         @JacksonXmlProperty(isAttribute = true, localName = "Tax2")

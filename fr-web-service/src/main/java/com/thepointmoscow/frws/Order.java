@@ -1,8 +1,10 @@
 package com.thepointmoscow.frws;
 
+import com.google.common.base.Strings;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -15,8 +17,8 @@ public class Order {
     private Firm firm;
     private Cashier cashier;
     private Customer customer;
-    private List<Item> items;
-    private List<Payment> payments;
+    private List<Item> items = Collections.emptyList();
+    private List<Payment> payments = Collections.emptyList();
     private Boolean isElectronic;
 
     @Data
@@ -30,6 +32,11 @@ public class Order {
     public static class Cashier {
         private String firstName;
         private String lastName;
+
+        @Override
+        public String toString() {
+            return firstName + " " + lastName;
+        }
     }
 
     @Data
@@ -37,6 +44,10 @@ public class Order {
     public static class Customer {
         private String phone;
         private String email;
+
+        public String getId() {
+            return Strings.isNullOrEmpty(phone) ? phone : email;
+        }
     }
 
     @Data

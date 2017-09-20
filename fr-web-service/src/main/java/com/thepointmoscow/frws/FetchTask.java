@@ -27,7 +27,7 @@ public class FetchTask implements Runnable {
                 case NONE:
                     return;
                 case REGISTER:
-                    RegistrationResult registration = fiscal.register(command.getOrder(), command.getIssueID());
+                    RegistrationResult registration = fiscal.register(command.getOrder(), command.getIssueID(), status.isSessionClosed());
                     backend.sendResult(registration);
                     break;
                 case CLOSE_SESSION:

@@ -6,7 +6,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-class OpenSessionRequest extends QkkmRequest {
+public class OpenSessionRequest extends QkkmRequest {
     @JacksonXmlProperty(localName = "OpenSession")
     private String command = null;
 }

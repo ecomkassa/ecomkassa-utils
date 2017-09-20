@@ -28,4 +28,13 @@ public class StatusResult {
     private byte modeFR;
     private byte subModeFR;
     private String statusMessage;
+
+    /**
+     * Checks against the session opening.
+     *
+     * @return is session need to open
+     */
+    public boolean isSessionClosed() {
+        return ((byte) 4) == getModeFR();
+    }
 }

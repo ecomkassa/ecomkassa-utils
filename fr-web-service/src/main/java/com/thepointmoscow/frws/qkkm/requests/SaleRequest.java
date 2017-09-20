@@ -3,21 +3,24 @@ package com.thepointmoscow.frws.qkkm.requests;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
+@Accessors(chain = true)
 public class SaleRequest extends QkkmRequest {
     @JacksonXmlProperty(localName = "Sale")
     private Sale sale;
 
     @Data
+    @Accessors(chain = true)
     public static class Sale {
         @JacksonXmlProperty(isAttribute = true, localName = "Text")
         private String text;
         @JacksonXmlProperty(isAttribute = true, localName = "Amount")
-        private int amount;
+        private long amount;
         @JacksonXmlProperty(isAttribute = true, localName = "Price")
-        private int price;
+        private long price;
         @JacksonXmlProperty(isAttribute = true, localName = "Group")
         private String group;
         @JacksonXmlProperty(isAttribute = true, localName = "Tax1")

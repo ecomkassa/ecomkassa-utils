@@ -6,11 +6,10 @@ import com.thepointmoscow.frws.FiscalGateway;
 import com.thepointmoscow.frws.Order;
 import com.thepointmoscow.frws.RegistrationResult;
 import com.thepointmoscow.frws.StatusResult;
-import com.thepointmoscow.frws.qkkm.requests.DeviceStatusRequest;
-import com.thepointmoscow.frws.qkkm.requests.QkkmRequest;
-import com.thepointmoscow.frws.qkkm.requests.XReportRequest;
-import com.thepointmoscow.frws.qkkm.requests.ZReportRequest;
+import com.thepointmoscow.frws.qkkm.requests.*;
 import com.thepointmoscow.frws.qkkm.responses.DeviceStatusResponse;
+import com.thepointmoscow.frws.qkkm.responses.FiscalMarkResponse;
+import com.thepointmoscow.frws.qkkm.responses.LastFdIdResponse;
 import com.thepointmoscow.frws.qkkm.responses.QkkmResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,11 +18,10 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.util.Objects;
 
+import static com.thepointmoscow.frws.qkkm.requests.OpenCheckRequest.SALE_TYPE;
 import static java.time.format.DateTimeFormatter.ofPattern;
 
 /**
@@ -64,16 +62,93 @@ public class QkkmFiscalGateway implements FiscalGateway {
      * @return response object
      * @throws IOException possibly IO exception
      */
-    private <RESP> RESP executeCommand(QkkmRequest request, Class<RESP> responseType) throws IOException {
+    private <RESP extends QkkmResponse> RESP executeCommand(QkkmRequest request, Class<RESP> responseType) throws IOException, QkkmException {
         XmlMapper mapper = new XmlMapper();
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         String raw = executeCommand(mapper.writeValueAsString(request));
-        return mapper.readValue(raw, responseType);
+        RESP resp = mapper.readValue(raw, responseType);
+        if (resp.getError().getId() != 0)
+            throw new QkkmException(resp.getError().getText(), resp.getError().getId());
+        return resp;
     }
 
     @Override
-    public RegistrationResult register(Order order, Long issueID) {
-        throw new UnsupportedOperationException("register");
+    public RegistrationResult register(Order order, Long issueID, boolean openSession) {
+        try {
+            if (openSession) {
+                executeCommand(new OpenSessionRequest(), QkkmResponse.class);
+            }
+            executeCommand(
+                    new OpenCheckRequest().setOpenCheck(
+                            new OpenCheckRequest.OpenCheck().setType(SALE_TYPE).setOperator(order.getCashier().toString())
+                    ), QkkmResponse.class);
+            for (Order.Item item : order.getItems()) {
+                executeCommand(new SaleRequest().setSale(
+                        new SaleRequest.Sale()
+                                .setText(item.getName())
+                                .setAmount(item.getAmount())
+                                .setPrice(item.getPrice())
+                                .setTax1(1)
+                                .setGroup("0")
+                ), QkkmResponse.class);
+            }
+
+            if (order.getIsElectronic()) {
+                executeCommand(new SetTlvRequest().setSetTlv(
+                        new SetTlvRequest.SetTlv()
+                                .setType("1008")
+                                .setData(order.getCustomer().getId())
+                                .setLen(order.getCustomer().getId().length())
+                        ), QkkmResponse.class
+                );
+            }
+
+            long[] payments = new long[]{0, 0, 0, 0};
+            for (Order.Payment pmt : order.getPayments()) {
+                switch (pmt.getPaymentType()) {
+                    case "CASH":
+                        payments[0] += pmt.getAmount();
+                        break;
+                    case "CREDIT_CARD":
+                        payments[1] += pmt.getAmount();
+                        break;
+                }
+            }
+
+            executeCommand(new CloseCheckRequest().setOpenCheck(
+                    new CloseCheckRequest.CloseCheck()
+                            .setSummaCash(payments[0])
+                            .setSumma2(payments[1])
+                            .setSumma3(payments[2])
+                            .setSumma4(payments[3])
+                            .setTax1(1)
+            ), QkkmResponse.class);
+
+            String docId = executeCommand(new LastFdIdRequest(), LastFdIdResponse.class).getResponse().getId();
+            String sign = executeCommand(new FiscalMarkRequest().setCommand(
+                    new FiscalMarkRequest.FiscalMark().setId(docId)
+            ), FiscalMarkResponse.class).getResponse().getId();
+
+            StatusResult status = status();
+
+            return new RegistrationResult().apply(status).setRegistration(
+                    new RegistrationResult.Registration()
+                            .setDocNo(docId)
+                            .setIssueID(issueID.toString())
+                            .setRegDate(ZonedDateTime.of(status.getFrDateTime(), ZoneId.of(order.getFirm().getTimezone())))
+                            .setSignature(sign)
+            );
+        } catch (QkkmException e) {
+            log.error("An error occurred while registering.", e);
+            return new RegistrationResult()
+                    .setErrorCode(e.getErrorCode())
+                    .setStatusMessage(e.getMessage());
+        } catch (Exception e) {
+            log.error("An error occurred while registering.", e);
+            return new RegistrationResult()
+                    .setErrorCode(-1)
+                    .setStatusMessage(e.getMessage());
+        }
     }
 
     @Override
@@ -82,6 +157,11 @@ public class QkkmFiscalGateway implements FiscalGateway {
             executeCommand(new XReportRequest(), QkkmResponse.class);
             executeCommand(new ZReportRequest(), QkkmResponse.class);
             return status();
+        } catch (QkkmException e) {
+            log.error("An error occurred while closing session.", e);
+            return new StatusResult()
+                    .setErrorCode(e.getErrorCode())
+                    .setStatusMessage(e.getMessage());
         } catch (Exception e) {
             log.error("An error occurred while closing session.", e);
             return new StatusResult()
