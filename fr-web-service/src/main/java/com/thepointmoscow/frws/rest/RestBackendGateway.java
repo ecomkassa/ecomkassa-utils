@@ -32,10 +32,10 @@ public class RestBackendGateway implements BackendGateway {
     }
 
     @Override
-    public BackendCommand sendResult(RegistrationResult registrationResult) {
+    public BackendCommand register(RegistrationResult registration) {
         ResponseEntity<BackendCommand> result = restTemplate.postForEntity(
-                rootUrl + "/api/qkkm/registered?ccmID={ccmID}&issueID={issueID}", registrationResult,
-                BackendCommand.class, ccmID, registrationResult.getRegistration().getIssueID());
+                rootUrl + "/api/qkkm/registered?ccmID={ccmID}&issueID={issueID}", registration,
+                BackendCommand.class, ccmID, registration.getRegistration().getIssueID());
         return result.getBody();
     }
 }

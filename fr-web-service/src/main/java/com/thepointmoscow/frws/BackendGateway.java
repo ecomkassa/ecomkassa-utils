@@ -1,7 +1,22 @@
 package com.thepointmoscow.frws;
 
+/**
+ * Backend gateway.
+ */
 public interface BackendGateway {
+    /**
+     * Sends status to backend.
+     *
+     * @param statusResult status
+     * @return command
+     */
     BackendCommand status(StatusResult statusResult);
 
-    BackendCommand sendResult(RegistrationResult registrationResult);
+    /**
+     * Sends registration to backend.
+     *
+     * @param registration registration
+     * @return command
+     */
+    BackendCommand register(RegistrationResult registration);
 }

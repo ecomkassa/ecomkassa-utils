@@ -11,6 +11,9 @@ import com.thepointmoscow.frws.qkkm.responses.DeviceStatusResponse;
 import com.thepointmoscow.frws.qkkm.responses.FiscalMarkResponse;
 import com.thepointmoscow.frws.qkkm.responses.LastFdIdResponse;
 import com.thepointmoscow.frws.qkkm.responses.QkkmResponse;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -27,14 +30,16 @@ import static java.time.format.DateTimeFormatter.ofPattern;
 /**
  * A fiscal gateway based on QKKM server.
  */
-@Component
 @Slf4j
+@Accessors(chain = true)
 public class QkkmFiscalGateway implements FiscalGateway {
 
     private static final Charset CHARSET = Charset.forName("UTF-8");
-    @Value("${qkkm.server.host}")
+    @Getter
+    @Setter
     private String host;
-    @Value("${qkkm.server.port}")
+    @Getter
+    @Setter
     private int port;
 
     /**
