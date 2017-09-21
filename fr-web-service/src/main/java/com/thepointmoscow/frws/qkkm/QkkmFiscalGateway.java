@@ -15,8 +15,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -49,7 +47,7 @@ public class QkkmFiscalGateway implements FiscalGateway {
      * @return text response
      * @throws IOException possibly IO exception
      */
-    private String executeCommand(String command) throws IOException {
+    private synchronized String executeCommand(String command) throws IOException {
         try (Socket socket = new Socket(host, port)) {
             socket.getOutputStream().write(command.getBytes(CHARSET));
             byte buf[] = new byte[32 * 1024];

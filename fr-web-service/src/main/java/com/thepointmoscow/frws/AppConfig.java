@@ -1,7 +1,8 @@
 package com.thepointmoscow.frws;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.thepointmoscow.frws.fakes.LoggingFiscalGateway;
 import com.thepointmoscow.frws.qkkm.QkkmFiscalGateway;
 import lombok.Getter;
@@ -16,7 +17,7 @@ import org.springframework.http.client.BufferingClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.concurrent.Executors;
@@ -41,18 +42,17 @@ public class AppConfig {
             RestTemplateBuilder builder, ClientHttpRequestFactory factory, ClientHttpRequestInterceptor interceptor) {
         return builder
                 .requestFactory(factory)
-                .additionalMessageConverters(mappingJackson())
                 .additionalInterceptors(interceptor)
                 .build();
     }
 
     @Bean
-    public MappingJackson2HttpMessageConverter mappingJackson() {
-        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        converter.setObjectMapper(mapper);
-        return converter;
+    public ObjectMapper objectMapper() {
+        return Jackson2ObjectMapperBuilder.json()
+                .indentOutput(false)
+                .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .modules(new JavaTimeModule())
+                .build();
     }
 
     @Bean
