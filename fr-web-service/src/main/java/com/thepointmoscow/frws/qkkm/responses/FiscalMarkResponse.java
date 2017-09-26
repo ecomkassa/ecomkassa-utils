@@ -12,7 +12,7 @@ public class FiscalMarkResponse extends QkkmResponse {
 
     @Data
     public class LastFdId {
-        @JacksonXmlProperty(isAttribute = true)
+        @JacksonXmlProperty(isAttribute = true, localName = "fiskalMark")
         private String id;
     }
 }

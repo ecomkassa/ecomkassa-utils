@@ -52,7 +52,9 @@ public class QkkmFiscalGateway implements FiscalGateway {
             socket.getOutputStream().write(command.getBytes(CHARSET));
             byte buf[] = new byte[32 * 1024];
             int len = socket.getInputStream().read(buf);
-            return new String(buf, 0, len, CHARSET);
+            String response = new String(buf, 0, len, CHARSET);
+            log.info("SENT >>> {}; RECEIVED <<< {}", command, response);
+            return response;
         }
     }
 
@@ -68,8 +70,11 @@ public class QkkmFiscalGateway implements FiscalGateway {
     private <RESP extends QkkmResponse> RESP executeCommand(QkkmRequest request, Class<RESP> responseType) throws IOException, QkkmException {
         XmlMapper mapper = new XmlMapper();
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        String raw = executeCommand(mapper.writeValueAsString(request));
-        RESP resp = mapper.readValue(raw, responseType);
+        RESP resp;
+        do {
+            String raw = executeCommand(mapper.writeValueAsString(request));
+            resp = mapper.readValue(raw, responseType);
+        } while (resp.getError().getId() == 80);
         if (resp.getError().getId() != 0)
             throw new QkkmException(resp.getError().getText(), resp.getError().getId());
         return resp;

@@ -35,6 +35,6 @@ public class StatusResult {
      * @return is session need to open
      */
     public boolean isSessionClosed() {
-        return ((byte) 4) == getModeFR();
+        return ((byte) 3) == getModeFR();
     }
 }
