@@ -33,6 +33,9 @@ import static java.time.format.DateTimeFormatter.ofPattern;
 public class QkkmFiscalGateway implements FiscalGateway {
 
     private static final Charset CHARSET = Charset.forName("UTF-8");
+    private static final String VAT_18_PCT = "VAT_18PCT";
+    private static final String VAT_10_PCT = "VAT_10PCT";
+    private static final String VAT_0_PCT = "VAT_0PCT";
     @Getter
     @Setter
     private String host;
@@ -96,7 +99,10 @@ public class QkkmFiscalGateway implements FiscalGateway {
                                 .setText(item.getName())
                                 .setAmount(item.getAmount())
                                 .setPrice(item.getPrice())
-                                .setTax1(1)
+                                .setTax1(Objects.equals(VAT_18_PCT, item.getVatType()) ? 1 : 0)
+                                .setTax2(Objects.equals(VAT_10_PCT, item.getVatType()) ? 1 : 0)
+                                .setTax3(0) // VAT 20% is not applicable
+                                .setTax4(Objects.equals(VAT_0_PCT, item.getVatType()) ? 1 : 0)
                                 .setGroup("0")
                 ), QkkmResponse.class);
             }
@@ -129,7 +135,13 @@ public class QkkmFiscalGateway implements FiscalGateway {
                             .setSumma2(payments[1])
                             .setSumma3(payments[2])
                             .setSumma4(payments[3])
-                            .setTax1(1)
+                            .setTax1(order.getItems().stream().map(Order.Item::getVatType)
+                                    .anyMatch(x -> Objects.equals(VAT_18_PCT, x)) ? 1 : 0)
+                            .setTax2(order.getItems().stream().map(Order.Item::getVatType)
+                                    .anyMatch(x -> Objects.equals(VAT_10_PCT, x)) ? 1 : 0)
+                            .setTax3(0)
+                            .setTax4(order.getItems().stream().map(Order.Item::getVatType)
+                                    .anyMatch(x -> Objects.equals(VAT_0_PCT, x)) ? 1 : 0)
             ), QkkmResponse.class);
 
             String docId = executeCommand(new LastFdIdRequest(), LastFdIdResponse.class).getResponse().getId();
