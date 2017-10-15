@@ -23,7 +23,7 @@ public class Order {
 
     @Data
     @Accessors(chain = true)
-    public static class Firm {
+    private static class Firm {
         private String timezone;
     }
 
@@ -46,7 +46,7 @@ public class Order {
         private String email;
 
         public String getId() {
-            return Strings.isNullOrEmpty(phone) ? phone : email;
+            return !Strings.isNullOrEmpty(email) ? email : phone;
         }
     }
 
