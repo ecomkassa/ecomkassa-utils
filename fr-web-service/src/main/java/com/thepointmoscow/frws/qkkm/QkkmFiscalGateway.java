@@ -20,7 +20,9 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.time.*;
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 
 import static com.thepointmoscow.frws.qkkm.requests.OpenCheckRequest.SALE_TYPE;
 import static java.time.format.DateTimeFormatter.ofPattern;
@@ -64,13 +66,16 @@ public class QkkmFiscalGateway implements FiscalGateway {
     /**
      * Executes command with a fiscal registrar.
      *
+     * @param <RESP>       response type
      * @param request      request object
      * @param responseType response type
-     * @param <RESP>       response type
+     * @param normalCodes  a set of codes are intended to be normal
      * @return response object
      * @throws IOException possibly IO exception
      */
-    private <RESP extends QkkmResponse> RESP executeCommand(QkkmRequest request, Class<RESP> responseType) throws IOException, QkkmException {
+    private <RESP extends QkkmResponse> RESP executeCommand(
+            QkkmRequest request, Class<RESP> responseType,
+            Set<Integer> normalCodes) throws IOException, QkkmException {
         XmlMapper mapper = new XmlMapper();
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         RESP resp;
@@ -78,8 +83,9 @@ public class QkkmFiscalGateway implements FiscalGateway {
             String raw = executeCommand(mapper.writeValueAsString(request));
             resp = mapper.readValue(raw, responseType);
         } while (resp.getError().getId() == 80);
-        if (resp.getError().getId() != 0)
-            throw new QkkmException(resp.getError().getText(), resp.getError().getId());
+        final int errorId = resp.getError().getId();
+        if (errorId != 0 && !normalCodes.contains(errorId))
+            throw new QkkmException(resp.getError().getText(), errorId);
         return resp;
     }
 
@@ -87,12 +93,12 @@ public class QkkmFiscalGateway implements FiscalGateway {
     public RegistrationResult register(Order order, Long issueID, boolean openSession) {
         try {
             if (openSession) {
-                executeCommand(new OpenSessionRequest(), QkkmResponse.class);
+                executeCommand(new OpenSessionRequest(), QkkmResponse.class, Collections.emptySet());
             }
             executeCommand(
                     new OpenCheckRequest().setOpenCheck(
                             new OpenCheckRequest.OpenCheck().setType(SALE_TYPE).setOperator(order.getCashier().toString())
-                    ), QkkmResponse.class);
+                    ), QkkmResponse.class, Collections.emptySet());
             for (Order.Item item : order.getItems()) {
                 executeCommand(new SaleRequest().setSale(
                         new SaleRequest.Sale()
@@ -104,7 +110,7 @@ public class QkkmFiscalGateway implements FiscalGateway {
                                 .setTax3(0) // VAT 20% is not applicable
                                 .setTax4(Objects.equals(VAT_0_PCT, item.getVatType()) ? 1 : 0)
                                 .setGroup("0")
-                ), QkkmResponse.class);
+                ), QkkmResponse.class, Collections.emptySet());
             }
 
             if (order.getIsElectronic()) {
@@ -113,7 +119,8 @@ public class QkkmFiscalGateway implements FiscalGateway {
                                 .setType("1008")
                                 .setData(order.getCustomer().getId())
                                 .setLen(order.getCustomer().getId().length())
-                        ), QkkmResponse.class
+                        ), QkkmResponse.class,
+                        Collections.singleton(12) // added code 12 as normal operation exit
                 );
             }
 
@@ -142,12 +149,12 @@ public class QkkmFiscalGateway implements FiscalGateway {
                             .setTax3(0)
                             .setTax4(order.getItems().stream().map(Order.Item::getVatType)
                                     .anyMatch(x -> Objects.equals(VAT_0_PCT, x)) ? 1 : 0)
-            ), QkkmResponse.class);
+            ), QkkmResponse.class, Collections.emptySet());
 
-            String docId = executeCommand(new LastFdIdRequest(), LastFdIdResponse.class).getResponse().getId();
+            String docId = executeCommand(new LastFdIdRequest(), LastFdIdResponse.class, Collections.emptySet()).getResponse().getId();
             String sign = executeCommand(new FiscalMarkRequest().setCommand(
                     new FiscalMarkRequest.FiscalMark().setId(docId)
-            ), FiscalMarkResponse.class).getResponse().getId();
+            ), FiscalMarkResponse.class, Collections.emptySet()).getResponse().getId();
 
             StatusResult status = status();
 
@@ -174,8 +181,8 @@ public class QkkmFiscalGateway implements FiscalGateway {
     @Override
     public StatusResult closeSession() {
         try {
-            executeCommand(new XReportRequest(), QkkmResponse.class);
-            executeCommand(new ZReportRequest(), QkkmResponse.class);
+            executeCommand(new XReportRequest(), QkkmResponse.class, Collections.emptySet());
+            executeCommand(new ZReportRequest(), QkkmResponse.class, Collections.emptySet());
             return status();
         } catch (QkkmException e) {
             log.error("An error occurred while closing session.", e);
@@ -195,7 +202,7 @@ public class QkkmFiscalGateway implements FiscalGateway {
     public StatusResult status() {
         StatusResult result = new StatusResult();
         try {
-            DeviceStatusResponse dsr = executeCommand(new DeviceStatusRequest(), DeviceStatusResponse.class);
+            DeviceStatusResponse dsr = executeCommand(new DeviceStatusRequest(), DeviceStatusResponse.class, Collections.emptySet());
             if (!Objects.equals(dsr.getError().getId(), 0)) {
                 return result
                         .setStatusMessage(dsr.getError().getText())
