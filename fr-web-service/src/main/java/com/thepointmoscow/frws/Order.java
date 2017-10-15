@@ -23,7 +23,7 @@ public class Order {
 
     @Data
     @Accessors(chain = true)
-    private static class Firm {
+    public static class Firm {
         private String timezone;
     }
 
