@@ -212,7 +212,7 @@ public class QkkmFiscalGateway implements FiscalGateway {
             DeviceStatusResponse.DeviceStatus ds = dsr.getStatus();
             result.setOnline("1".equals(ds.getIsOnline()))
                     .setStatusMessage(ds.getStatusMessageHTML())
-                    .setCurrentDocNumber(ds.getCurrentDocNumber())
+                    .setCurrentDocNumber(ds.getCurrentDocNumber() + 1)
                     .setCurrentSession(ds.getNumberLastClousedSession() + 1)
                     .setErrorCode(ds.getDeviceErrorCode())
                     .setInn(ds.getInn())
