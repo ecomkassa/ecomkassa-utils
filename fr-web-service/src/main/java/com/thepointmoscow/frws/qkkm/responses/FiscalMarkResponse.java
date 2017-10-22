@@ -8,10 +8,11 @@ import lombok.EqualsAndHashCode;
 @Data
 public class FiscalMarkResponse extends QkkmResponse {
     @JacksonXmlProperty(localName = "GetFiskalMarkById")
-    private LastFdId response;
+    private FiscalMark response;
 
+    @SuppressWarnings("WeakerAccess")
     @Data
-    public class LastFdId {
+    public class FiscalMark {
         @JacksonXmlProperty(isAttribute = true, localName = "fiskalMark")
         private String id;
     }

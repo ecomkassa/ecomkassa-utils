@@ -99,5 +99,6 @@ public class RegistrationResult extends StatusResult {
         private String signature;
         private String docNo;
         private ZonedDateTime regDate;
+        private int sessionCheck;
     }
 }

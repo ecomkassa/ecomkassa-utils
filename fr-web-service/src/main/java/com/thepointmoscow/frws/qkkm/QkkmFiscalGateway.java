@@ -7,10 +7,7 @@ import com.thepointmoscow.frws.Order;
 import com.thepointmoscow.frws.RegistrationResult;
 import com.thepointmoscow.frws.StatusResult;
 import com.thepointmoscow.frws.qkkm.requests.*;
-import com.thepointmoscow.frws.qkkm.responses.DeviceStatusResponse;
-import com.thepointmoscow.frws.qkkm.responses.FiscalMarkResponse;
-import com.thepointmoscow.frws.qkkm.responses.LastFdIdResponse;
-import com.thepointmoscow.frws.qkkm.responses.QkkmResponse;
+import com.thepointmoscow.frws.qkkm.responses.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -156,10 +153,14 @@ public class QkkmFiscalGateway implements FiscalGateway {
                     new FiscalMarkRequest.FiscalMark().setId(docId)
             ), FiscalMarkResponse.class, Collections.emptySet()).getResponse().getId();
 
+            GetNumSaleCheckResponse.NumSaleCheck checkInfo = executeCommand(
+                    new GetNumSaleCheckRequest(), GetNumSaleCheckResponse.class, Collections.emptySet()).getResponse();
+
             StatusResult status = status();
 
-            return new RegistrationResult().apply(status).setRegistration(
+            return new RegistrationResult().apply(status).setCurrentSession(checkInfo.getSession()).setRegistration(
                     new RegistrationResult.Registration()
+                            .setSessionCheck(checkInfo.getNumCheck())
                             .setDocNo(docId)
                             .setIssueID(issueID.toString())
                             .setRegDate(ZonedDateTime.of(status.getFrDateTime(), ZoneId.of(order.getFirm().getTimezone())))
@@ -212,7 +213,7 @@ public class QkkmFiscalGateway implements FiscalGateway {
             DeviceStatusResponse.DeviceStatus ds = dsr.getStatus();
             result.setOnline("1".equals(ds.getIsOnline()))
                     .setStatusMessage(ds.getStatusMessageHTML())
-                    .setCurrentDocNumber(ds.getCurrentDocNumber() + 1)
+                    .setCurrentDocNumber(ds.getCurrentDocNumber())
                     .setCurrentSession(ds.getNumberLastClousedSession() + 1)
                     .setErrorCode(ds.getDeviceErrorCode())
                     .setInn(ds.getInn())
