@@ -35,6 +35,10 @@ public class QkkmFiscalGateway implements FiscalGateway {
     private static final String VAT_18_PCT = "VAT_18PCT";
     private static final String VAT_10_PCT = "VAT_10PCT";
     private static final String VAT_0_PCT = "VAT_0PCT";
+    /**
+     * The maximal number of status retries.
+     */
+    private static final int MAX_STATUS_RETRIES = 10;
     @Getter
     @Setter
     private String host;
@@ -153,10 +157,19 @@ public class QkkmFiscalGateway implements FiscalGateway {
                     new FiscalMarkRequest.FiscalMark().setId(docId)
             ), FiscalMarkResponse.class, Collections.emptySet()).getResponse().getId();
 
+            StatusResult status;
+            int i = 0;
+            do {
+                status = status();
+                if (++i > MAX_STATUS_RETRIES) {
+                    log.warn("The maximal number ({}) of status retries used. Trying to go next", MAX_STATUS_RETRIES);
+                    break;
+                }
+                Thread.sleep(500);
+            } while (status.getModeFR() != 2);
+
             GetNumSaleCheckResponse.NumSaleCheck checkInfo = executeCommand(
                     new GetNumSaleCheckRequest(), GetNumSaleCheckResponse.class, Collections.emptySet()).getResponse();
-
-            StatusResult status = status();
 
             return new RegistrationResult().apply(status).setCurrentSession(checkInfo.getSession()).setRegistration(
                     new RegistrationResult.Registration()
