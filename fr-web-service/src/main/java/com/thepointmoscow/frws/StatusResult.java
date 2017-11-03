@@ -28,6 +28,7 @@ public class StatusResult {
     private byte modeFR;
     private byte subModeFR;
     private String statusMessage;
+    private String appVersion;
 
     /**
      * Checks against the session opening.

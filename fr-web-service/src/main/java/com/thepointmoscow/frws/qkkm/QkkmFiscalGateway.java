@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.info.BuildProperties;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -21,6 +22,7 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 
+import static com.thepointmoscow.frws.qkkm.requests.OpenCheckRequest.RETURN_SALE_TYPE;
 import static com.thepointmoscow.frws.qkkm.requests.OpenCheckRequest.SALE_TYPE;
 import static java.time.format.DateTimeFormatter.ofPattern;
 
@@ -45,6 +47,15 @@ public class QkkmFiscalGateway implements FiscalGateway {
     @Getter
     @Setter
     private int port;
+
+    /**
+     * App version source.
+     */
+    private final BuildProperties buildProperties;
+
+    public QkkmFiscalGateway(BuildProperties buildProperties) {
+        this.buildProperties = buildProperties;
+    }
 
     /**
      * Executes a text command with a fiscal registrar.
@@ -98,7 +109,9 @@ public class QkkmFiscalGateway implements FiscalGateway {
             }
             executeCommand(
                     new OpenCheckRequest().setOpenCheck(
-                            new OpenCheckRequest.OpenCheck().setType(SALE_TYPE).setOperator(order.getCashier().toString())
+                            new OpenCheckRequest.OpenCheck()
+                                    .setType(order.getSaleCharge().equals("SALE_RETURN") ? RETURN_SALE_TYPE : SALE_TYPE)
+                                    .setOperator(order.getCashier().toString())
                     ), QkkmResponse.class, Collections.emptySet());
             for (Order.Item item : order.getItems()) {
                 executeCommand(new SaleRequest().setSale(
@@ -236,7 +249,8 @@ public class QkkmFiscalGateway implements FiscalGateway {
                     .setFrDateTime(LocalDateTime.of(
                             LocalDate.parse(ds.getDateFR(), ofPattern("yyyy.MM.dd")),
                             LocalTime.parse(ds.getTimeFR(), ofPattern("HH:mm:ss"))
-                    ));
+                    ))
+                    .setAppVersion(buildProperties.getVersion());
         } catch (Exception e) {
             log.error("Error while fetching a status of the fiscal registrar", e);
             result.setErrorCode(-1);

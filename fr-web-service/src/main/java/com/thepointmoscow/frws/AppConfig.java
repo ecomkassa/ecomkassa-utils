@@ -7,8 +7,10 @@ import com.thepointmoscow.frws.fakes.LoggingFiscalGateway;
 import com.thepointmoscow.frws.qkkm.QkkmFiscalGateway;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +27,13 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @Configuration
 public class AppConfig {
+
+    private final BuildProperties buildProperties;
+
+    @Autowired
+    public AppConfig(BuildProperties buildProperties) {
+        this.buildProperties = buildProperties;
+    }
 
     @Bean
     public ClientHttpRequestFactory requestFactory() {
@@ -64,8 +73,8 @@ public class AppConfig {
     @Bean
     public FiscalGateway fiscalGateway() {
         if (isFgMock())
-            return new LoggingFiscalGateway();
-        return new QkkmFiscalGateway().setHost(fgHost).setPort(fgPort);
+            return new LoggingFiscalGateway(buildProperties);
+        return new QkkmFiscalGateway(buildProperties).setHost(fgHost).setPort(fgPort);
     }
 
     @Getter

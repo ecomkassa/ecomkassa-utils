@@ -1,0 +1,28 @@
+# service web port, 8080 is default
+server.port: 8080
+
+# delay in seconds between task starts, 30 is default
+task.delay: 30
+
+# Qkkm server settings
+qkkm:
+  server:
+    # mock is used for debug, in production is intended to be off
+    mock: false
+    # Qkkm server host
+    host: '127.0.0.1'
+    # Qkkm server port, 4545 is default
+    port: 4545
+
+# Backend server settings,
+# there are required and have no defaults
+backend:
+  server:
+    # Backend URL
+    url: 'https://app.ecomkassa.ru'
+    # Backend account username
+    username: 'some@user.name'
+    # Backend account password
+    password: 'password'
+    # Backend ID for the connected control cashing machine, UUID format
+    ccmID: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
