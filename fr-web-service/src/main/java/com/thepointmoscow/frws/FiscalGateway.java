@@ -15,11 +15,25 @@ public interface FiscalGateway {
     RegistrationResult register(Order order, Long issueID, boolean openSession);
 
     /**
+     * Opens a session.
+     *
+     * @return status
+     */
+    StatusResult openSession();
+
+    /**
      * Makes a session closing command.
      *
      * @return status
      */
     StatusResult closeSession();
+
+    /**
+     * Cancels a check.
+     *
+     * @return status
+     */
+    StatusResult cancelCheck();
 
     /**
      * Makes a status retrieval command.

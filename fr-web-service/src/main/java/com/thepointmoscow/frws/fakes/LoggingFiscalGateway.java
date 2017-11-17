@@ -50,8 +50,20 @@ public class LoggingFiscalGateway implements FiscalGateway {
     }
 
     @Override
+    public StatusResult openSession() {
+        log.info("Session opening request received.");
+        return status;
+    }
+
+    @Override
     public StatusResult closeSession() {
         log.info("Session closing request received.");
+        return status;
+    }
+
+    @Override
+    public StatusResult cancelCheck() {
+        log.info("Check canceling request received.");
         return status;
     }
 

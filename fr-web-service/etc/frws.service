@@ -6,10 +6,10 @@ After=qkkmserver.target
 [Service]
 Type=simple
 PIDFile=/var/run/frws/service.pid
-WorkingDirectory=/opt/frws
+WorkingDirectory=/var/lib/frws
 User=pi
 Group=pi
-ExecStart=/usr/bin/java -jar -Dserver.port=8081 -Dbackend.server.ccmID=2705dfee-7781-11e7-b413-c7fc6cd36f17 -Dqkkm.server.mock=false -Dqkkm.server.port=20002 -Dtask.delay=5 /opt/frws/fr-web-service.jar
+ExecStart=/usr/bin/java -Dspring.config.location=file:///etc/frws/application.yml -jar /var/lib/frws/frws.jar
 TimeoutSec=300
 
 [Install]

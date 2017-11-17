@@ -205,6 +205,29 @@ public class QkkmFiscalGateway implements FiscalGateway {
         }
     }
 
+    /**
+     * Opens a session.
+     *
+     * @return status
+     */
+    @Override
+    public StatusResult openSession() {
+        try {
+            executeCommand(new OpenSessionRequest(), QkkmResponse.class, Collections.emptySet());
+            return status();
+        } catch (QkkmException e) {
+            log.error("An error occurred while opening a session.", e);
+            return new StatusResult()
+                    .setErrorCode(e.getErrorCode())
+                    .setStatusMessage(e.getMessage());
+        } catch (Exception e) {
+            log.error("An error occurred while opening a session.", e);
+            return new StatusResult()
+                    .setErrorCode(-1)
+                    .setStatusMessage(e.getMessage());
+        }
+    }
+
     @Override
     public StatusResult closeSession() {
         try {
@@ -212,17 +235,41 @@ public class QkkmFiscalGateway implements FiscalGateway {
             executeCommand(new ZReportRequest(), QkkmResponse.class, Collections.emptySet());
             return status();
         } catch (QkkmException e) {
-            log.error("An error occurred while closing session.", e);
+            log.error("An error occurred while closing a session.", e);
             return new StatusResult()
                     .setErrorCode(e.getErrorCode())
                     .setStatusMessage(e.getMessage());
         } catch (Exception e) {
-            log.error("An error occurred while closing session.", e);
+            log.error("An error occurred while closing a session.", e);
             return new StatusResult()
                     .setErrorCode(-1)
                     .setStatusMessage(e.getMessage());
         }
 
+    }
+
+
+    /**
+     * Cancels a check.
+     *
+     * @return status
+     */
+    @Override
+    public StatusResult cancelCheck() {
+        try {
+            executeCommand(new CancelCheckRequest(), QkkmResponse.class, Collections.emptySet());
+            return status();
+        } catch (QkkmException e) {
+            log.error("An error occurred while canceling a check.", e);
+            return new StatusResult()
+                    .setErrorCode(e.getErrorCode())
+                    .setStatusMessage(e.getMessage());
+        } catch (Exception e) {
+            log.error("An error occurred while canceling a check.", e);
+            return new StatusResult()
+                    .setErrorCode(-1)
+                    .setStatusMessage(e.getMessage());
+        }
     }
 
     @Override
