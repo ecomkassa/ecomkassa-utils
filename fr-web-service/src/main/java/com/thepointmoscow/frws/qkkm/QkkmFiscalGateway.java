@@ -41,6 +41,10 @@ public class QkkmFiscalGateway implements FiscalGateway {
      * The maximal number of status retries.
      */
     private static final int MAX_STATUS_RETRIES = 10;
+    /**
+     * Timeout in millis to wait a response.
+     */
+    private static final int SOCKET_TIMEOUT_MILLIS = 10000;
     @Getter
     @Setter
     private String host;
@@ -68,6 +72,7 @@ public class QkkmFiscalGateway implements FiscalGateway {
         try (Socket socket = new Socket(host, port)) {
             socket.getOutputStream().write(command.getBytes(CHARSET));
             byte buf[] = new byte[32 * 1024];
+            socket.setSoTimeout(SOCKET_TIMEOUT_MILLIS);
             int len = socket.getInputStream().read(buf);
             String response = new String(buf, 0, len, CHARSET);
             log.info("SENT >>> {}; RECEIVED <<< {}", command, response);
@@ -218,11 +223,13 @@ public class QkkmFiscalGateway implements FiscalGateway {
         } catch (QkkmException e) {
             log.error("An error occurred while opening a session.", e);
             return new StatusResult()
+                    .setAppVersion(buildProperties.getVersion())
                     .setErrorCode(e.getErrorCode())
                     .setStatusMessage(e.getMessage());
         } catch (Exception e) {
             log.error("An error occurred while opening a session.", e);
             return new StatusResult()
+                    .setAppVersion(buildProperties.getVersion())
                     .setErrorCode(-1)
                     .setStatusMessage(e.getMessage());
         }
@@ -237,11 +244,13 @@ public class QkkmFiscalGateway implements FiscalGateway {
         } catch (QkkmException e) {
             log.error("An error occurred while closing a session.", e);
             return new StatusResult()
+                    .setAppVersion(buildProperties.getVersion())
                     .setErrorCode(e.getErrorCode())
                     .setStatusMessage(e.getMessage());
         } catch (Exception e) {
             log.error("An error occurred while closing a session.", e);
             return new StatusResult()
+                    .setAppVersion(buildProperties.getVersion())
                     .setErrorCode(-1)
                     .setStatusMessage(e.getMessage());
         }
@@ -262,11 +271,13 @@ public class QkkmFiscalGateway implements FiscalGateway {
         } catch (QkkmException e) {
             log.error("An error occurred while canceling a check.", e);
             return new StatusResult()
+                    .setAppVersion(buildProperties.getVersion())
                     .setErrorCode(e.getErrorCode())
                     .setStatusMessage(e.getMessage());
         } catch (Exception e) {
             log.error("An error occurred while canceling a check.", e);
             return new StatusResult()
+                    .setAppVersion(buildProperties.getVersion())
                     .setErrorCode(-1)
                     .setStatusMessage(e.getMessage());
         }
@@ -274,7 +285,7 @@ public class QkkmFiscalGateway implements FiscalGateway {
 
     @Override
     public StatusResult status() {
-        StatusResult result = new StatusResult();
+        StatusResult result = new StatusResult().setAppVersion(buildProperties.getVersion());
         try {
             DeviceStatusResponse dsr = executeCommand(new DeviceStatusRequest(), DeviceStatusResponse.class, Collections.emptySet());
             if (!Objects.equals(dsr.getError().getId(), 0)) {
@@ -296,13 +307,17 @@ public class QkkmFiscalGateway implements FiscalGateway {
                     .setFrDateTime(LocalDateTime.of(
                             LocalDate.parse(ds.getDateFR(), ofPattern("yyyy.MM.dd")),
                             LocalTime.parse(ds.getTimeFR(), ofPattern("HH:mm:ss"))
-                    ))
-                    .setAppVersion(buildProperties.getVersion());
+                    ));
         } catch (Exception e) {
             log.error("Error while fetching a status of the fiscal registrar", e);
             result.setErrorCode(-1);
             result.setStatusMessage(e.getMessage());
         }
         return result;
+    }
+
+    @Override
+    public StatusResult continuePrint() {
+        throw new UnsupportedOperationException("continuePrint");
     }
 }

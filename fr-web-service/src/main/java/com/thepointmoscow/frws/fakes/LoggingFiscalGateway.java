@@ -72,4 +72,10 @@ public class LoggingFiscalGateway implements FiscalGateway {
         log.info("Status retrieval request received.");
         return status;
     }
+
+    @Override
+    public StatusResult continuePrint() {
+        log.info("Print continuation request received.");
+        return status;
+    }
 }

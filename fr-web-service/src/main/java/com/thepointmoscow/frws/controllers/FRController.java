@@ -66,4 +66,15 @@ public class FRController {
     public StatusResult cancelCheck() {
         return frGateway.cancelCheck();
     }
+
+    /**
+     * Continues printing of an opened check.
+     *
+     * @return status
+     */
+    @RequestMapping("/continue/print")
+    public StatusResult continuePrint() {
+        return frGateway.continuePrint();
+    }
+
 }
