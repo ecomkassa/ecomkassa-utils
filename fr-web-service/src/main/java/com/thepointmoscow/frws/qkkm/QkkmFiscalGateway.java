@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.boot.info.BuildProperties;
 
 import java.io.IOException;
@@ -45,6 +46,10 @@ public class QkkmFiscalGateway implements FiscalGateway {
      * Timeout in millis to wait a response.
      */
     private static final int SOCKET_TIMEOUT_MILLIS = 10000;
+    /**
+     * Code for an electronic check attribute.
+     */
+    private static final String ELECTRONIC_ATTR_CODE = "1008";
     @Getter
     @Setter
     private String host;
@@ -112,30 +117,33 @@ public class QkkmFiscalGateway implements FiscalGateway {
             if (openSession) {
                 executeCommand(new OpenSessionRequest(), QkkmResponse.class, Collections.emptySet());
             }
+            final boolean isSaleReturn = order.getSaleCharge().equals("SALE_RETURN");
             executeCommand(
                     new OpenCheckRequest().setOpenCheck(
                             new OpenCheckRequest.OpenCheck()
-                                    .setType(order.getSaleCharge().equals("SALE_RETURN") ? RETURN_SALE_TYPE : SALE_TYPE)
+                                    .setType(isSaleReturn ? RETURN_SALE_TYPE : SALE_TYPE)
                                     .setOperator(order.getCashier().toString())
                     ), QkkmResponse.class, Collections.emptySet());
             for (Order.Item item : order.getItems()) {
-                executeCommand(new SaleRequest().setSale(
-                        new SaleRequest.Sale()
-                                .setText(item.getName())
-                                .setAmount(item.getAmount())
-                                .setPrice(item.getPrice())
-                                .setTax1(Objects.equals(VAT_18_PCT, item.getVatType()) ? 1 : 0)
-                                .setTax2(Objects.equals(VAT_10_PCT, item.getVatType()) ? 1 : 0)
-                                .setTax3(0) // VAT 20% is not applicable
-                                .setTax4(Objects.equals(VAT_0_PCT, item.getVatType()) ? 1 : 0)
-                                .setGroup("0")
-                ), QkkmResponse.class, Collections.emptySet());
+                val sale = new Sale()
+                        .setText(item.getName())
+                        .setAmount(item.getAmount())
+                        .setPrice(item.getPrice())
+                        .setTax1(Objects.equals(VAT_18_PCT, item.getVatType()) ? 1 : 0)
+                        .setTax2(Objects.equals(VAT_10_PCT, item.getVatType()) ? 1 : 0)
+                        .setTax3(0) // VAT 20% is not applicable
+                        .setTax4(Objects.equals(VAT_0_PCT, item.getVatType()) ? 1 : 0)
+                        .setGroup("0");
+                final QkkmRequest request = isSaleReturn
+                        ? new ReturnSaleRequest().setSale(sale)
+                        : new SaleRequest().setSale(sale);
+                executeCommand(request, QkkmResponse.class, Collections.emptySet());
             }
 
             if (order.getIsElectronic()) {
                 executeCommand(new SetTlvRequest().setSetTlv(
                         new SetTlvRequest.SetTlv()
-                                .setType("1008")
+                                .setType(ELECTRONIC_ATTR_CODE)
                                 .setData(order.getCustomer().getId())
                                 .setLen(order.getCustomer().getId().length())
                         ), QkkmResponse.class,

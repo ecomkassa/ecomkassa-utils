@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>fr-web-service</artifactId>
-    <version>0.1.4</version>
+    <version>0.1.5</version>
 
     <name>Fiscal registrar Web service</name>
 
@@ -56,7 +56,7 @@
     </dependencies>
 
     <build>
-        <finalName>frws</finalName>
+        <finalName>frws-${project.version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

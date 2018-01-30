@@ -8,7 +8,7 @@ import lombok.experimental.Accessors;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
-public class SaleRequest extends QkkmRequest {
-    @JacksonXmlProperty(localName = "Sale")
+public class ReturnSaleRequest extends QkkmRequest {
+    @JacksonXmlProperty(localName = "ReturnSale")
     private Sale sale;
 }
