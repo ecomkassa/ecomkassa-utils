@@ -38,7 +38,7 @@ public class FRController {
     }
 
     /**
-     * Manually closes a session with X and Z reports executions.
+     * Manually closes a session with Z report execution.
      *
      * @return status
      */

@@ -246,7 +246,6 @@ public class QkkmFiscalGateway implements FiscalGateway {
     @Override
     public StatusResult closeSession() {
         try {
-            executeCommand(new XReportRequest(), QkkmResponse.class, Collections.emptySet());
             executeCommand(new ZReportRequest(), QkkmResponse.class, Collections.emptySet());
             return status();
         } catch (QkkmException e) {
@@ -326,6 +325,22 @@ public class QkkmFiscalGateway implements FiscalGateway {
 
     @Override
     public StatusResult continuePrint() {
-        throw new UnsupportedOperationException("continuePrint");
+        try {
+            executeCommand(new ContinuePrintRequest(), QkkmResponse.class, Collections.emptySet());
+            return status();
+        } catch (QkkmException e) {
+            log.error("An error occurred while continuing printing.", e);
+            return new StatusResult()
+                    .setAppVersion(buildProperties.getVersion())
+                    .setErrorCode(e.getErrorCode())
+                    .setStatusMessage(e.getMessage());
+        } catch (Exception e) {
+            log.error("An error occurred while continuing printing.", e);
+            return new StatusResult()
+                    .setAppVersion(buildProperties.getVersion())
+                    .setErrorCode(-1)
+                    .setStatusMessage(e.getMessage());
+        }
+
     }
 }

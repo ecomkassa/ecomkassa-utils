@@ -6,7 +6,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-class ContinuePrintRequest extends QkkmRequest {
+public class ContinuePrintRequest extends QkkmRequest {
     @JacksonXmlProperty(localName = "ContinuePrint")
     private String command = null;
 }
