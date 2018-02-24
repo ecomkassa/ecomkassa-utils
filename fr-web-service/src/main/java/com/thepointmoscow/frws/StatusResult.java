@@ -25,8 +25,8 @@ public class StatusResult {
     private String serialNumber;
     private int currentDocNumber;
     private int currentSession;
-    private byte modeFR;
-    private byte subModeFR;
+    private int modeFR;
+    private int subModeFR;
     private String statusMessage;
     private String appVersion;
 
@@ -36,6 +36,6 @@ public class StatusResult {
      * @return is session need to open
      */
     public boolean isSessionClosed() {
-        return ((byte) 3) == getModeFR();
+        return 3 == getModeFR();
     }
 }

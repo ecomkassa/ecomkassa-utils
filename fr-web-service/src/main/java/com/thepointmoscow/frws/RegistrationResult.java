@@ -76,13 +76,13 @@ public class RegistrationResult extends StatusResult {
     }
 
     @Override
-    public RegistrationResult setModeFR(byte modeFR) {
+    public RegistrationResult setModeFR(int modeFR) {
         super.setModeFR(modeFR);
         return this;
     }
 
     @Override
-    public RegistrationResult setSubModeFR(byte subModeFR) {
+    public RegistrationResult setSubModeFR(int subModeFR) {
         super.setSubModeFR(subModeFR);
         return this;
     }
