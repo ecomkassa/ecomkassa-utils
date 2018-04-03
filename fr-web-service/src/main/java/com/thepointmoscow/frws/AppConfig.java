@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.thepointmoscow.frws.fakes.LoggingFiscalGateway;
 import com.thepointmoscow.frws.qkkm.QkkmFiscalGateway;
+import com.thepointmoscow.frws.umka.UmkaFiscalGateway;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -26,8 +28,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 @Configuration
+@Slf4j
 public class AppConfig {
 
+    private static final String UMKA_DEFAULT_LOGIN = "1";
+    private static final String UMKA_DEFAULT_PASSWORD = "1";
     private final BuildProperties buildProperties;
 
     @Autowired
@@ -71,24 +76,39 @@ public class AppConfig {
     }
 
     @Bean
-    public FiscalGateway fiscalGateway() {
-        if (isFgMock())
-            return new LoggingFiscalGateway(buildProperties);
-        return new QkkmFiscalGateway(buildProperties).setHost(fgHost).setPort(fgPort);
+    public FiscalGateway fiscalGateway(ObjectMapper mapper) {
+
+        try {
+            switch (FiscalServerType.valueOf(fgType)) {
+            case mock:
+                return new LoggingFiscalGateway(buildProperties);
+            case qkkm:
+                return new QkkmFiscalGateway(buildProperties).setHost(fgHost).setPort(fgPort);
+            case umka:
+                return new UmkaFiscalGateway(fgHost, fgPort, UMKA_DEFAULT_LOGIN, UMKA_DEFAULT_PASSWORD, buildProperties,
+                        mapper);
+            default:
+                throw new IllegalArgumentException(getFgType());
+            }
+        } catch (IllegalArgumentException e) {
+            log.error("'fiscal.server.type' property value is unknown: {}. "
+                            + "Intended to use some of 'mock', 'qkkm' or 'umka'",
+                    fgType);
+            throw e;
+        }
     }
 
     @Getter
     @Setter
-    @Value("${qkkm.server.host}")
+    @Value("${fiscal.server.host}")
     private String fgHost;
     @Getter
     @Setter
-    @Value("${qkkm.server.port}")
+    @Value("${fiscal.server.port}")
     private int fgPort;
     @Getter
     @Setter
-    @Value("${qkkm.server.mock}")
-    private boolean fgMock;
-
+    @Value("${fiscal.server.type}")
+    private String fgType;
 
 }

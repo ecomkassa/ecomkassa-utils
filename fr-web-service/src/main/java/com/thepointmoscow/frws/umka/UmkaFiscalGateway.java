@@ -104,8 +104,8 @@ public class UmkaFiscalGateway implements FiscalGateway {
         data.setDocName("Кассовый чек");
         // multiple payment types are not supported
         val paymentType = order.getPayments().stream().findFirst().map(Order.Payment::getPaymentType)
-                .map(PaymentType::valueOf).map(PaymentType::getCode).orElse(PaymentType.CASH.getCode());
-        data.setMoneyType(paymentType);
+                .map(PaymentType::valueOf).orElse(PaymentType.CASH);
+        data.setMoneyType(paymentType.getCode());
         data.setType(SaleChargeGeneral.valueOf(order.getSaleCharge()).getCode());
         final Long sum = order.getItems().stream()
                 .map(it -> it.getPrice() * it.getAmount()).reduce((x, y) -> x + y)
@@ -120,7 +120,7 @@ public class UmkaFiscalGateway implements FiscalGateway {
         tags.add(new FiscalProperty().setTag(1018).setValue(info.getInn()));
         tags.add(new FiscalProperty().setTag(1055).setValue(info.getTaxVariant()));
         // check total
-        tags.add(new FiscalProperty().setTag(1081).setValue(sum));
+        tags.add(new FiscalProperty().setTag(paymentType == PaymentType.CREDIT_CARD ? 1081 : 1031).setValue(sum));
         // Sale Charge
         tags.add(new FiscalProperty().setTag(1054)
                 .setValue(SaleCharge.valueOf(order.getSaleCharge()).getCode()));
