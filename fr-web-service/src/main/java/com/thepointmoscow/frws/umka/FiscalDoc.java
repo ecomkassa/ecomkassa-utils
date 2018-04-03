@@ -6,5 +6,6 @@ import lombok.Data;
 class FiscalDoc {
     private String sessionId;
     private int print = 0;
+    private int result = 0;
     private FiscalData data;
 }
