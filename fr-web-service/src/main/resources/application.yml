@@ -4,12 +4,11 @@ server:
 logging:
   config: 'classpath:logback.xml'
 
-task:
-  delay: 30
+task.delay: 30
 
-qkkm:
+fiscal:
   server:
-    mock: true
+    type: 'mock'
     host: '127.0.0.1'
     port: 4545
 
