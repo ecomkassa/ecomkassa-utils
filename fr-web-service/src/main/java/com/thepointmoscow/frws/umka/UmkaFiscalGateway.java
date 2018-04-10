@@ -5,22 +5,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thepointmoscow.frws.FiscalGateway;
 import com.thepointmoscow.frws.Order;
 import com.thepointmoscow.frws.RegistrationResult;
-import com.thepointmoscow.frws.RequestLoggingInterceptor;
 import com.thepointmoscow.frws.StatusResult;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.springframework.boot.info.BuildProperties;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.BufferingClientHttpRequestFactory;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
@@ -47,13 +44,16 @@ public class UmkaFiscalGateway implements FiscalGateway {
     private static final int CLEARING_TYPE = 4;
     private static final int CLEARING_OBJECT_COMMODITY = 1;
     private static final int SUMMARY_AMOUNT_DENOMINATOR = 1000;
+    // Status modes.
+    static final int STATUS_OPEN_SESSION = 2;
+    static final int STATUS_EXPIRED_SESSION = 3;
+    static final int STATUS_CLOSED_SESSION = 4;
 
     private final String umkaHost;
     private final int umkaPort;
-    private final String username;
-    private final String password;
     private final BuildProperties buildProperties;
     private final ObjectMapper mapper;
+    private final RestTemplate restTemplate;
 
     private volatile RegInfo lastStatus;
 
@@ -74,21 +74,6 @@ public class UmkaFiscalGateway implements FiscalGateway {
      */
     private StatusResult prepareStatus() {
         return new StatusResult().setAppVersion(getBuildProperties().getVersion());
-    }
-
-    /**
-     * Configures a REST client.
-     *
-     * @return REST client
-     */
-    private RestTemplate configureRest() {
-        val factory = new BufferingClientHttpRequestFactory(new SimpleClientHttpRequestFactory());
-        val interceptor = new RequestLoggingInterceptor();
-        return new RestTemplateBuilder()
-                .requestFactory(factory)
-                .additionalInterceptors(interceptor)
-                .basicAuthorization(getUsername(), getPassword())
-                .build();
     }
 
     @Override
@@ -142,21 +127,16 @@ public class UmkaFiscalGateway implements FiscalGateway {
             tags.add(item);
         }
         tags.add(new FiscalProperty().setTag(1060).setValue("www.nalog.ru"));
-        RestTemplate rest = configureRest();
         Map<String, Object> request = new HashMap<>();
         request.put("document", doc);
 
-        String responseStr = rest.postForObject(
+        String responseStr = getRestTemplate().postForObject(
                 makeUrl("fiscalcheck.json"),
                 new HttpEntity<>(request, generateHttpHeaders()),
                 String.class);
         RegistrationResult registration = new RegistrationResult().apply(status());
         try {
             JsonNode response = mapper.readTree(responseStr);
-            if (response.path("document").path("result").asInt(0) == SESSION_EXPIRED_ERROR) {
-                closeSession();
-                return register(order, issueID, true);
-            }
             val propsArr = response.path("document").path("data").path("fiscprops").iterator();
             val codes = new HashSet<Integer>(Arrays.asList(1040, 1042));
             val values = new HashMap<Integer, Integer>();
@@ -203,13 +183,13 @@ public class UmkaFiscalGateway implements FiscalGateway {
 
     @Override
     public StatusResult openSession() {
-        configureRest().getForObject(makeUrl("cycleopen.json?print=1"), String.class);
+        getRestTemplate().getForObject(makeUrl("cycleopen.json?print=1"), String.class);
         return status();
     }
 
     @Override
     public StatusResult closeSession() {
-        configureRest().getForObject(makeUrl("cycleclose.json?print=1"), String.class);
+        getRestTemplate().getForObject(makeUrl("cycleclose.json?print=1"), String.class);
         return status();
     }
 
@@ -220,8 +200,7 @@ public class UmkaFiscalGateway implements FiscalGateway {
 
     @Override
     public StatusResult status() {
-        RestTemplate rest = configureRest();
-        String responseStr = rest.getForObject(makeUrl("cashboxstatus.json"), String.class);
+        String responseStr = getRestTemplate().getForObject(makeUrl("cashboxstatus.json"), String.class);
         val result = prepareStatus();
         JsonNode response;
         try {
@@ -233,21 +212,49 @@ public class UmkaFiscalGateway implements FiscalGateway {
         result.setErrorCode(0);
         result.setCurrentDocNumber(status.map(x -> x.get("fsStatus").get("lastDocNumber").asInt()).orElse(-1));
         result.setCurrentSession(status.map(x -> x.get("cycleNumber").asInt()).orElse(-1));
-        result.setFrDateTime(
-                status.map(x -> x.get("dt").asText()).map(x -> OffsetDateTime.parse(x, RFC_1123_DATE_TIME))
-                        .map(OffsetDateTime::toLocalDateTime).orElse(LocalDateTime.MIN)
-        );
+        final Optional<OffsetDateTime> timestamp = status.map(x -> x.get("dt").asText())
+                .map(x -> OffsetDateTime.parse(x, RFC_1123_DATE_TIME));
+
+        result.setFrDateTime(timestamp.map(OffsetDateTime::toLocalDateTime).orElse(LocalDateTime.MIN));
         result.setOnline(status.map(x -> !x.get("offlineMode").asBoolean()).orElse(false));
         final String inn = status.map(x -> x.get("userInn").asText()).orElse("");
         result.setInn(inn);
         final String regNumber = status.map(x -> x.get("regNumber").asText()).orElse("");
         final int taxVariant = status.map(x -> x.get("taxes").asInt()).orElse(0);
-        this.lastStatus = new RegInfo(inn, taxVariant, regNumber);
-        result.setModeFR(2);
+
+        boolean isOpen = status.map(x -> x.path("fsStatus").path("cycleIsOpen"))
+                .map(x -> x.isInt() && x.asInt() != 0).orElse(false);
+
+        final Optional<OffsetDateTime> opened = status.map(x -> x.path("cycleOpened"))
+                .filter(JsonNode::isTextual)
+                .map(x -> OffsetDateTime.parse(x.asText(), RFC_1123_DATE_TIME));
+
+        result.setModeFR(statusMode(isOpen, timestamp, opened));
         result.setSubModeFR(0);
         result.setSerialNumber(status.map(x -> x.get("serial").asText()).orElse(""));
         result.setStatusMessage(Optional.ofNullable(response.path("message")).map(JsonNode::asText).orElse(""));
+
+        this.lastStatus = new RegInfo(inn, taxVariant, regNumber);
         return result;
+    }
+
+    /**
+     * Calculates status mode code.
+     *
+     * @param isOpen is session open
+     * @param ts timestamp
+     * @param opened date session opened
+     * @return status mode code
+     */
+    private int statusMode(boolean isOpen, Optional<OffsetDateTime> ts, Optional<OffsetDateTime> opened) {
+        if (!isOpen) {
+            return STATUS_CLOSED_SESSION;
+        }
+        if (ts.isPresent() && opened.isPresent()
+                && Duration.between(opened.get(), ts.get()).toMinutes() >= 60 * 24) {
+            return STATUS_EXPIRED_SESSION;
+        }
+        return STATUS_OPEN_SESSION;
     }
 
     /**

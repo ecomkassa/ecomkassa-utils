@@ -1,100 +1,98 @@
 package com.thepointmoscow.frws.umka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.thepointmoscow.frws.Order;
-import com.thepointmoscow.frws.RegistrationResult;
 import lombok.val;
+import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.info.BuildProperties;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.Random;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-class UmkaFiscalGatewayTest {
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = { UtilityConfig.class, WebTestConfig.class }) class UmkaFiscalGatewayTest {
 
-    private static final String TEST_HOST = "95.31.13.249";
-    private static final int TEST_PORT = 8088;
-    private static final String USERNAME = "17";
-    private static final String PASSWORD = "17";
-    private static final String APP_VERSION = "1.2.3-test";
+    private static final String GET_STATUS_URL = "http://TEST_HOST:54321/cashboxstatus.json";
+    private MockRestServiceServer server;
+
+    @Autowired
+    private ObjectMapper mapper;
+
+    @Autowired
+    @Qualifier("umka")
+    private RestTemplate restTemplate;
 
     private UmkaFiscalGateway sut;
 
     @BeforeEach
-    void setup() {
+    private void setup() {
         BuildProperties props = Mockito.mock(BuildProperties.class);
-        Mockito.when(props.getVersion()).thenReturn(APP_VERSION);
-        this.sut = new UmkaFiscalGateway(TEST_HOST, TEST_PORT, USERNAME, PASSWORD, props, new ObjectMapper());
+        Mockito.when(props.getVersion()).thenReturn("test.app.version");
+        server = MockRestServiceServer.bindTo(restTemplate).build();
+        this.sut = new UmkaFiscalGateway("TEST_HOST", 54321, props, mapper, restTemplate);
     }
 
-    @Test
-    void shouldReturnStatus() {
-        // GIVEN // WHEN
-        val result = sut.status();
-        // THEN
-        assertThat(result).isNotNull();
-        assertThat(result.getType()).isEqualToIgnoringCase("status");
-        assertThat(result.getErrorCode()).isEqualTo(0);
-        assertThat(result.getModeFR()).isEqualTo(2);
-        assertThat(result.getSerialNumber()).isNotEmpty();
-        assertThat(result.getCurrentDocNumber()).isNotEqualTo(0);
-        assertThat(result.getCurrentSession()).isGreaterThanOrEqualTo(0);
-        assertThat(result.getAppVersion()).isEqualTo(APP_VERSION);
-        assertThat(result.getFrDateTime()).isNotNull().isNotEqualTo(LocalDateTime.MIN);
-        assertThat(result.isOnline()).isTrue();
+    private String getBodyFromFile(String path) throws IOException {
+        final InputStream resource = getClass().getResourceAsStream(path);
+        StringWriter writer = new StringWriter();
+        String encoding = StandardCharsets.UTF_8.name();
+        IOUtils.copy(resource, writer, encoding);
+        return writer.toString();
     }
 
-    @Test
-    void shouldRegisterOrderWithCashPayment() {
+    @Test void shouldGetExpiredStatus() throws IOException {
         // GIVEN
-        Order order = new Order().set_id(1L).setOrderType("CASH_VOUCHER").setStatus("PAID").setSaleCharge("SALE");
-        order.setFirm(new Order.Firm().setTimezone("Europe/Moscow"));
-        order.setCashier(new Order.Cashier().setFirstName("Имя").setLastName("Фамилия"));
-        order.setCustomer(new Order.Customer().setEmail("customer@example.com"));
-        order.setItems(Collections.singletonList(
-                new Order.Item().setName("Тапочки для тараканов").setAmount(1000L).setPrice(1L)
-                        .setVatType("VAT_18PCT")));
-        order.setPayments(Collections.singletonList(new Order.Payment().setAmount(1L).setPaymentType("CASH")));
-        Random rnd = new Random();
+        final String body = getBodyFromFile("/com/thepointmoscow/frws/umka/expired-session.json");
+
+        this.server.expect(requestTo(GET_STATUS_URL))
+                .andRespond(withSuccess(body, MediaType.TEXT_PLAIN));
         // WHEN
-        val result = sut.register(order, rnd.nextLong(), false);
+        val res = sut.status();
         // THEN
-        assertThat(result).isNotNull();
-        final RegistrationResult.Registration registration = result.getRegistration();
-        assertThat(registration).isNotNull();
-        assertThat(registration.getSignature()).isNotEmpty();
-        assertThat(registration.getRegDate()).isNotNull();
-        assertThat(registration.getSessionCheck()).isNotEqualTo(0);
-        assertThat(registration.getDocNo()).isNotEmpty();
+        assertThat(res).isNotNull();
+        assertThat(res.getModeFR()).isEqualTo(UmkaFiscalGateway.STATUS_EXPIRED_SESSION);
     }
 
-    @Test
-    void shouldRegisterOrderWithCreditCardPayment() {
+    @Test void shouldGetOpenedStatus() throws IOException {
         // GIVEN
-        Order order = new Order().set_id(1L).setOrderType("CASH_VOUCHER").setStatus("PAID").setSaleCharge("SALE");
-        order.setFirm(new Order.Firm().setTimezone("Europe/Moscow"));
-        order.setCashier(new Order.Cashier().setFirstName("Имя").setLastName("Фамилия"));
-        order.setCustomer(new Order.Customer().setEmail("customer@example.com"));
-        order.setItems(Collections.singletonList(
-                new Order.Item().setName("Тапочки для тараканов").setAmount(1000L).setPrice(1L)
-                        .setVatType("VAT_18PCT")));
-        order.setPayments(Collections.singletonList(new Order.Payment().setAmount(1L).setPaymentType("CREDIT_CARD")));
-        Random rnd = new Random();
+        final String body = getBodyFromFile("/com/thepointmoscow/frws/umka/open-session.json");
+
+        this.server.expect(requestTo(GET_STATUS_URL))
+                .andRespond(withSuccess(body, MediaType.TEXT_PLAIN));
         // WHEN
-        val result = sut.register(order, rnd.nextLong(), false);
+        val res = sut.status();
         // THEN
-        assertThat(result).isNotNull();
-        final RegistrationResult.Registration registration = result.getRegistration();
-        assertThat(registration).isNotNull();
-        assertThat(registration.getSignature()).isNotEmpty();
-        assertThat(registration.getRegDate()).isNotNull();
-        assertThat(registration.getSessionCheck()).isNotEqualTo(0);
-        assertThat(registration.getDocNo()).isNotEmpty();
+        assertThat(res).isNotNull();
+        assertThat(res.getModeFR()).isEqualTo(UmkaFiscalGateway.STATUS_OPEN_SESSION);
+    }
+
+    @Test void shouldGetClosedStatus() throws IOException {
+        // GIVEN
+        final String body = getBodyFromFile("/com/thepointmoscow/frws/umka/closed-session.json");
+
+        this.server.expect(requestTo(GET_STATUS_URL))
+                .andRespond(withSuccess(body, MediaType.TEXT_PLAIN));
+        // WHEN
+        val res = sut.status();
+        // THEN
+        assertThat(res).isNotNull();
+        assertThat(res.getModeFR()).isEqualTo(UmkaFiscalGateway.STATUS_CLOSED_SESSION);
     }
 
 }

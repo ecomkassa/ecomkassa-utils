@@ -9,7 +9,6 @@ import com.thepointmoscow.frws.umka.UmkaFiscalGateway;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.boot.info.BuildProperties;
@@ -27,56 +26,15 @@ import org.springframework.web.client.RestTemplate;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
+import static com.thepointmoscow.frws.FiscalServerType.umka;
+
 @Configuration
 @Slf4j
 public class AppConfig {
 
-    private static final String UMKA_DEFAULT_LOGIN = "1";
-    private static final String UMKA_DEFAULT_PASSWORD = "1";
-    private final BuildProperties buildProperties;
-
-    @Autowired
-    public AppConfig(BuildProperties buildProperties) {
-        this.buildProperties = buildProperties;
-    }
-
     @Bean
-    public ClientHttpRequestFactory requestFactory() {
-        return new BufferingClientHttpRequestFactory(new SimpleClientHttpRequestFactory());
-    }
-
-    @Bean
-    public ClientHttpRequestInterceptor interceptor() {
-        return new RequestLoggingInterceptor();
-    }
-
-    @Bean
-    @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-    public RestTemplate restTemplate(
-            RestTemplateBuilder builder, ClientHttpRequestFactory factory, ClientHttpRequestInterceptor interceptor) {
-        return builder
-                .requestFactory(factory)
-                .additionalInterceptors(interceptor)
-                .build();
-    }
-
-    @Bean
-    public ObjectMapper objectMapper() {
-        return Jackson2ObjectMapperBuilder.json()
-                .indentOutput(false)
-                .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                .modules(new JavaTimeModule())
-                .build();
-    }
-
-    @Bean
-    @Scope
-    public ScheduledExecutorService taskExecutor() {
-        return Executors.newScheduledThreadPool(1);
-    }
-
-    @Bean
-    public FiscalGateway fiscalGateway(ObjectMapper mapper) {
+    public FiscalGateway fiscalGateway(ObjectMapper mapper, BuildProperties buildProperties,
+            RestTemplate restTemplate) {
 
         try {
             switch (FiscalServerType.valueOf(fgType)) {
@@ -85,8 +43,7 @@ public class AppConfig {
             case qkkm:
                 return new QkkmFiscalGateway(buildProperties).setHost(fgHost).setPort(fgPort);
             case umka:
-                return new UmkaFiscalGateway(fgHost, fgPort, UMKA_DEFAULT_LOGIN, UMKA_DEFAULT_PASSWORD, buildProperties,
-                        mapper);
+                return new UmkaFiscalGateway(fgHost, fgPort, buildProperties, mapper, restTemplate);
             default:
                 throw new IllegalArgumentException(getFgType());
             }
