@@ -24,16 +24,19 @@ public class FetchTask implements Runnable {
             StatusResult status = fiscal.status();
             command = backend.status(status);
             switch (command.getCommand()) {
-                case NONE:
-                    return;
-                case REGISTER:
-                    RegistrationResult registration = fiscal.register(command.getOrder(), command.getIssueID(), (byte) 4 == status.getModeFR());
-                    backend.register(registration);
-                    break;
-                case CLOSE_SESSION:
-                    fiscal.closeSession();
-                    break;
+            case NONE:
+                return;
+            case REGISTER:
+                RegistrationResult registration = fiscal
+                        .register(command.getOrder(), command.getIssueID(), (byte) 4 == status.getModeFR());
+                backend.register(registration);
+                break;
+            case CLOSE_SESSION:
+                fiscal.closeSession();
+                break;
             }
+        } catch (Exception e) {
+            log.error("Error while processing own status or input command (" + command + ").", e);
         } finally {
             doCallback(command);
         }

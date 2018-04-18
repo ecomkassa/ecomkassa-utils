@@ -3,7 +3,9 @@ package com.thepointmoscow.frws.umka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thepointmoscow.frws.Order;
 import com.thepointmoscow.frws.RegistrationResult;
+import com.thepointmoscow.frws.UtilityConfig;
 import lombok.val;
+import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration tests for an Umka fiscal gateway.
  */
+@Ignore
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = { UtilityConfig.class, WebTestConfig.class })
 class UmkaFiscalGatewayIT {

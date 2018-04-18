@@ -1,12 +1,9 @@
-package com.thepointmoscow.frws.umka;
+package com.thepointmoscow.frws;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.thepointmoscow.frws.FiscalServerType;
-import com.thepointmoscow.frws.RequestLoggingInterceptor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,9 +18,8 @@ import org.springframework.web.client.RestTemplate;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import static com.thepointmoscow.frws.FiscalServerType.umka;
-
 @Configuration
+@Slf4j
 public class UtilityConfig {
     private static final String UMKA_DEFAULT_LOGIN = "1";
     private static final String UMKA_DEFAULT_PASSWORD = "1";
@@ -42,13 +38,10 @@ public class UtilityConfig {
     public RestTemplate restTemplate(
             RestTemplateBuilder builder,
             ClientHttpRequestFactory factory,
-            ClientHttpRequestInterceptor interceptor,
-            @Value("${fiscal.server.type}") String fgType) {
+            ClientHttpRequestInterceptor interceptor) {
 
-        if (umka == FiscalServerType.valueOf(fgType)) {
-            builder.basicAuthorization(UMKA_DEFAULT_LOGIN, UMKA_DEFAULT_PASSWORD);
-        }
         return builder
+                .basicAuthorization(UMKA_DEFAULT_LOGIN, UMKA_DEFAULT_PASSWORD)
                 .requestFactory(factory)
                 .additionalInterceptors(interceptor)
                 .build();

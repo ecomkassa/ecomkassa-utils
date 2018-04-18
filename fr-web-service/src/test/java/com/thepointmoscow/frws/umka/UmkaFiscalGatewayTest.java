@@ -1,6 +1,7 @@
 package com.thepointmoscow.frws.umka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.thepointmoscow.frws.UtilityConfig;
 import lombok.val;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.BeforeEach;

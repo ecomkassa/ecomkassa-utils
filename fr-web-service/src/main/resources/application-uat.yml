@@ -1,0 +1,35 @@
+# service web port, 8080 is default
+server.port: 8080
+
+logging.level.com.thepointmoscow.frws: 'DEBUG'
+
+# delay in seconds between task starts, 30 is default
+task.delay: 30
+
+# Qkkm server settings
+fiscal:
+  server:
+    # 'mock', 'qkkm' or 'umka'
+    # 'mock' is used for debug.
+    # 'qkkm' is Qkkm Server integration.
+    # 'umka' is Umka Standard integration.
+    type: 'umka'
+    # Fiscal server host
+    host: '95.31.13.249'
+    # Fiscal server host
+    # Qkkm server port is 4545 by default
+    # Umka server port is 8088 by default
+    port: 8088
+
+# Backend server settings,
+# there are required and have no defaults
+backend:
+  server:
+    # Backend URL
+    url: 'https://app.ecomkassa.ru'
+    # Backend account username
+    username: 'sales@ecomkassa.ru'
+    # Backend account password
+    password: 'ecomkassa'
+    # Backend ID for the connected control cashing machine, UUID format
+    ccmID: '1fa01ec7-5bcd-4302-bfa2-f3f2f4092531'

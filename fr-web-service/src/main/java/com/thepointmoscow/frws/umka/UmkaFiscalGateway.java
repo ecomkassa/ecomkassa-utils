@@ -210,17 +210,22 @@ public class UmkaFiscalGateway implements FiscalGateway {
         }
         val status = Optional.ofNullable(response.get("cashboxStatus"));
         result.setErrorCode(0);
-        result.setCurrentDocNumber(status.map(x -> x.get("fsStatus").get("lastDocNumber").asInt()).orElse(-1));
-        result.setCurrentSession(status.map(x -> x.get("cycleNumber").asInt()).orElse(-1));
+        result.setCurrentDocNumber(
+                status.map(x -> x.path("fsStatus").path("lastDocNumber")).filter(JsonNode::isInt).map(JsonNode::asInt)
+                        .orElse(-1));
+        result.setCurrentSession(
+                status.map(x -> x.path("cycleNumber")).filter(JsonNode::isInt).map(JsonNode::asInt).orElse(-1));
         final Optional<OffsetDateTime> timestamp = status.map(x -> x.get("dt").asText())
                 .map(x -> OffsetDateTime.parse(x, RFC_1123_DATE_TIME));
 
         result.setFrDateTime(timestamp.map(OffsetDateTime::toLocalDateTime).orElse(LocalDateTime.MIN));
-        result.setOnline(status.map(x -> !x.get("offlineMode").asBoolean()).orElse(false));
-        final String inn = status.map(x -> x.get("userInn").asText()).orElse("");
+        result.setOnline(status.map(x -> x.path("offlineMode")).filter(JsonNode::isBoolean).map(JsonNode::asBoolean)
+                .orElse(false));
+        final String inn = status.map(x -> x.path("userInn")).filter(node -> !node.isMissingNode())
+                .map(JsonNode::asText).orElse("");
         result.setInn(inn);
         final String regNumber = status.map(x -> x.get("regNumber").asText()).orElse("");
-        final int taxVariant = status.map(x -> x.get("taxes").asInt()).orElse(0);
+        final int taxVariant = status.map(x -> x.path("taxes")).filter(JsonNode::isInt).map(JsonNode::asInt).orElse(0);
 
         boolean isOpen = status.map(x -> x.path("fsStatus").path("cycleIsOpen"))
                 .map(x -> x.isInt() && x.asInt() != 0).orElse(false);
