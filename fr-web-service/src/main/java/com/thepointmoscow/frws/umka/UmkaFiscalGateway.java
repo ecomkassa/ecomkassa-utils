@@ -219,8 +219,7 @@ public class UmkaFiscalGateway implements FiscalGateway {
                 .map(x -> OffsetDateTime.parse(x, RFC_1123_DATE_TIME));
 
         result.setFrDateTime(timestamp.map(OffsetDateTime::toLocalDateTime).orElse(LocalDateTime.MIN));
-        result.setOnline(status.map(x -> x.path("offlineMode")).filter(JsonNode::isBoolean).map(JsonNode::asBoolean)
-                .orElse(false));
+        result.setOnline(true);
         final String inn = status.map(x -> x.path("userInn")).filter(node -> !node.isMissingNode())
                 .map(JsonNode::asText).orElse("");
         result.setInn(inn);

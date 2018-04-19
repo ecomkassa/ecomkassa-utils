@@ -67,6 +67,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
         val res = sut.status();
         // THEN
         assertThat(res).isNotNull();
+        assertThat(res.isOnline()).isTrue();
         assertThat(res.getModeFR()).isEqualTo(UmkaFiscalGateway.STATUS_EXPIRED_SESSION);
     }
 
@@ -80,6 +81,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
         val res = sut.status();
         // THEN
         assertThat(res).isNotNull();
+        assertThat(res.isOnline()).isTrue();
         assertThat(res.getModeFR()).isEqualTo(UmkaFiscalGateway.STATUS_OPEN_SESSION);
     }
 
@@ -93,6 +95,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
         val res = sut.status();
         // THEN
         assertThat(res).isNotNull();
+        assertThat(res.isOnline()).isTrue();
         assertThat(res.getModeFR()).isEqualTo(UmkaFiscalGateway.STATUS_CLOSED_SESSION);
     }
 
