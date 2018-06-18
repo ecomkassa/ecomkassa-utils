@@ -7,7 +7,7 @@ services:
     volumes:
      - /var/docker/data/mongo/:/data/db
   backend:
-    image: "unlocker/mobilepos-backend:alpine-latest"
+    image: "unlocker/mobilepos-backend:latest"
     links:
      - mongo
     ports:

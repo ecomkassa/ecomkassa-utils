@@ -9,6 +9,7 @@ public class BackendCommand {
     private BackendCommandType command;
     private Order order;
     private Long issueID;
+    private String ccmID;
 
     /**
      * Command types.

@@ -7,16 +7,18 @@ public interface BackendGateway {
     /**
      * Sends status to backend.
      *
+     * @param ccmID cash machine ID
      * @param statusResult status
      * @return command
      */
-    BackendCommand status(StatusResult statusResult);
+    BackendCommand status(String ccmID, StatusResult statusResult);
 
     /**
      * Sends registration to backend.
      *
+     * @param ccmID cash machine ID
      * @param registration registration
      * @return command
      */
-    BackendCommand register(RegistrationResult registration);
+    BackendCommand register(String ccmID, RegistrationResult registration);
 }

@@ -15,31 +15,37 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class RestBackendGateway implements BackendGateway {
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
+
     @Value("${backend.server.url}")
     private String rootUrl;
+
     @Value("${backend.server.username}")
     private String username;
+
     @Value("${backend.server.password}")
     private String password;
-    @Value("${backend.server.ccmID}")
-    private String ccmID;
 
-    @Override
-    public BackendCommand status(StatusResult statusResult) {
-        ResponseEntity<BackendCommand> result = restTemplate.postForEntity(
-                rootUrl + "/api/qkkm/status?ccmID={ccmID}", statusResult, BackendCommand.class, ccmID);
-        log.info("Sent a status. RQ={}, RS={}", statusResult, result);
-        return result.getBody();
+    @Autowired
+    public RestBackendGateway(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
     @Override
-    public BackendCommand register(RegistrationResult registration) {
+    public BackendCommand status(String ccmID, StatusResult statusResult) {
+        ResponseEntity<BackendCommand> result = restTemplate.postForEntity(
+                rootUrl + "/api/qkkm/status?ccmID={ccmID}", statusResult,
+                BackendCommand.class, ccmID);
+        log.info("Sent a status. RQ={}, RS={}", statusResult, result);
+        return result.getBody().setCcmID(ccmID);
+    }
+
+    @Override
+    public BackendCommand register(String ccmID, RegistrationResult registration) {
         ResponseEntity<BackendCommand> result = restTemplate.postForEntity(
                 rootUrl + "/api/qkkm/registered?ccmID={ccmID}&issueID={issueID}", registration,
                 BackendCommand.class, ccmID, registration.getRegistration().getIssueID());
         log.info("Sent a registration. RQ={}, RS={}", registration, result);
-        return result.getBody();
+        return result.getBody().setCcmID(ccmID);
     }
 }
