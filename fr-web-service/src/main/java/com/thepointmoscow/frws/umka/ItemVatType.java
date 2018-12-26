@@ -14,7 +14,8 @@ public enum ItemVatType {
     VAT_110PCT(4),
     VAT_0PCT(5),
     VAT_NONE(6),
-    VAT_20PCT(6); // strange tax number, fallback to None
+    VAT_20PCT(1),
+    VAT_120PCT(3);
 
     @Getter
     private final int code;

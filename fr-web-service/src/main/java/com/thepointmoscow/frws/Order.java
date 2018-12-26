@@ -20,6 +20,7 @@ public class Order {
     private List<Item> items = Collections.emptyList();
     private List<Payment> payments = Collections.emptyList();
     private Boolean isElectronic;
+    private Correction correction;
 
     @Data
     @Accessors(chain = true)
@@ -64,5 +65,15 @@ public class Order {
     public static class Payment {
         private String paymentType;
         private Long amount;
+    }
+
+    @Data
+    @Accessors(chain = true)
+    public static class Correction {
+        private String correctionType;
+        private String vatType;
+        private String description;
+        private String documentDate;
+        private String documentNumber;
     }
 }

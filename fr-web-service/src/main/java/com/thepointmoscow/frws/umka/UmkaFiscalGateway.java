@@ -6,6 +6,7 @@ import com.thepointmoscow.frws.FiscalGateway;
 import com.thepointmoscow.frws.Order;
 import com.thepointmoscow.frws.RegistrationResult;
 import com.thepointmoscow.frws.StatusResult;
+import com.thepointmoscow.frws.exceptions.FrwsException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,16 +18,9 @@ import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
+import java.time.*;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 
@@ -81,20 +75,92 @@ public class UmkaFiscalGateway implements FiscalGateway {
         if (openSession) {
             openSession();
         }
+
+        boolean isCorrection = SaleCharge.valueOf(order.getSaleCharge()).isCorrection();
+        Map<String, Object> request = isCorrection ? correctionOrder(order, issueID) : regularOrder(order, issueID);
+
+        String responseStr = getRestTemplate().postForObject(
+                makeUrl("fiscalcheck.json"),
+                new HttpEntity<>(request, generateHttpHeaders()),
+                String.class);
+        RegistrationResult registration = new RegistrationResult().apply(status());
+        try {
+            JsonNode response = mapper.readTree(responseStr);
+            val propsArr = response.path("document").path("data").path("fiscprops").iterator();
+            val codes = new HashSet<Integer>(Arrays.asList(1040, 1042));
+            val values = new HashMap<Integer, Integer>();
+            Optional<ZonedDateTime> regDate = Optional.empty();
+            Optional<String> signature = Optional.empty();
+            while (propsArr.hasNext()) {
+                val current = propsArr.next();
+                final int tag = current.get("tag").asInt();
+                if (1012 == tag) {
+                    regDate = Optional.of(
+                            OffsetDateTime.parse(current.get("value").asText()
+                                    , RFC_1123_DATE_TIME
+                            ).toZonedDateTime()
+                    );
+                    continue;
+                }
+                if (1077 == tag) {
+                    signature = Optional.of(current.get("value").asText());
+                    continue;
+                }
+                if (codes.contains(tag)) {
+                    values.put(tag, current.get("value").asInt());
+                }
+            }
+            val documentNumber = Optional.ofNullable(values.get(1040));
+            val sessionCheck = Optional.ofNullable(values.get(1042));
+            if (Stream.of(regDate, signature, documentNumber, sessionCheck)
+                    .anyMatch(opt -> !opt.isPresent())) {
+                throw new FrwsException(
+                        String.format(
+                                "There is missed one or several required attributes for ORDER_ID=%s, ISSUE_ID=%s."
+                                , order.get_id()
+                                , issueID
+                        )
+                );
+            }
+            val regInfo = new RegistrationResult.Registration()
+                    .setIssueID(issueID.toString())
+                    .setRegDate(regDate.get())
+                    .setDocNo(documentNumber.get().toString())
+                    .setSignature(signature.get())
+                    .setSessionCheck(sessionCheck.get());
+            return registration.setRegistration(regInfo);
+        } catch (Exception e) {
+            log.error("Error parsing the response: {} | {}", responseStr, e.getMessage());
+            if (e instanceof FrwsException) {
+                throw (FrwsException) e;
+            } else {
+                throw new FrwsException(e);
+            }
+        }
+    }
+
+    /**
+     * Makes a regular order.
+     *
+     * @param order   order
+     * @param issueID issue ID
+     * @return codified order
+     */
+    private Map<String, Object> regularOrder(Order order, Long issueID) {
         val doc = new FiscalDoc();
         doc.setPrint(1);
         doc.setSessionId(issueID.toString());
         FiscalData data = new FiscalData();
         doc.setData(data);
         data.setDocName("Кассовый чек");
-        // multiple payment types are not supported
-        val paymentType = order.getPayments().stream().findFirst().map(Order.Payment::getPaymentType)
-                .map(PaymentType::valueOf).orElse(PaymentType.CASH);
+        val paymentType = order.getPayments().stream()
+                .findFirst()
+                .map(Order.Payment::getPaymentType)
+                .map(PaymentType::valueOf)
+                .orElse(PaymentType.CASH);
+
         data.setMoneyType(paymentType.getCode());
         data.setType(SaleChargeGeneral.valueOf(order.getSaleCharge()).getCode());
-        final Long sum = order.getItems().stream()
-                .map(it -> it.getPrice() * it.getAmount()).reduce((x, y) -> x + y)
-                .orElse(0L) / SUMMARY_AMOUNT_DENOMINATOR;
         data.setSum(0);
         val tags = new ArrayList<FiscalProperty>();
         data.setFiscprops(tags);
@@ -105,7 +171,13 @@ public class UmkaFiscalGateway implements FiscalGateway {
         tags.add(new FiscalProperty().setTag(1018).setValue(info.getInn()));
         tags.add(new FiscalProperty().setTag(1055).setValue(info.getTaxVariant()));
         // check total
-        tags.add(new FiscalProperty().setTag(paymentType == PaymentType.CREDIT_CARD ? 1081 : 1031).setValue(sum));
+        order.getPayments().stream()
+                .map(payment -> new FiscalProperty()
+                        .setTag(PaymentType.valueOf(payment.getPaymentType()).getTag())
+                        .setValue(payment.getAmount())
+                )
+                .forEach(tags::add);
+
         // Sale Charge
         tags.add(new FiscalProperty().setTag(1054)
                 .setValue(SaleCharge.valueOf(order.getSaleCharge()).getCode()));
@@ -129,45 +201,71 @@ public class UmkaFiscalGateway implements FiscalGateway {
         tags.add(new FiscalProperty().setTag(1060).setValue("www.nalog.ru"));
         Map<String, Object> request = new HashMap<>();
         request.put("document", doc);
+        return request;
+    }
 
-        String responseStr = getRestTemplate().postForObject(
-                makeUrl("fiscalcheck.json"),
-                new HttpEntity<>(request, generateHttpHeaders()),
-                String.class);
-        RegistrationResult registration = new RegistrationResult().apply(status());
-        try {
-            JsonNode response = mapper.readTree(responseStr);
-            val propsArr = response.path("document").path("data").path("fiscprops").iterator();
-            val codes = new HashSet<Integer>(Arrays.asList(1040, 1042));
-            val values = new HashMap<Integer, Integer>();
-            ZonedDateTime regDate = null;
-            String signature = "TBD";
-            while (propsArr.hasNext()) {
-                val current = propsArr.next();
-                final int tag = current.get("tag").asInt();
-                if (1012 == tag) {
-                    regDate = OffsetDateTime.parse(current.get("value").asText(), RFC_1123_DATE_TIME).toZonedDateTime();
-                    continue;
-                }
-                if (1077 == tag) {
-                    signature = current.get("value").asText();
-                    continue;
-                }
-                if (codes.contains(tag)) {
-                    values.put(tag, current.get("value").asInt());
-                }
-            }
-            val regInfo = new RegistrationResult.Registration()
-                    .setIssueID(issueID.toString())
-                    .setRegDate(regDate)
-                    .setDocNo(values.getOrDefault(1040, -1).toString())
-                    .setSignature(signature)
-                    .setSessionCheck(values.getOrDefault(1042, -1));
-            return registration.setRegistration(regInfo);
-        } catch (Exception e) {
-            log.error("Error parsing the response: {} | {}", responseStr, e.getMessage());
-            return registration.setErrorCode(-1);
+    /**
+     * Makes a correction order.
+     *
+     * @param order   order
+     * @param issueId issue ID
+     * @return codified order
+     */
+    private Map<String, Object> correctionOrder(Order order, Long issueId) {
+        val doc = new FiscalDoc();
+        doc.setPrint(1);
+        doc.setSessionId(issueId.toString());
+        FiscalData data = new FiscalData();
+        doc.setData(data);
+        data.setDocName("Чек коррекции");
+        val paymentType = order.getPayments().stream()
+                .findFirst()
+                .map(Order.Payment::getPaymentType)
+                .map(PaymentType::valueOf)
+                .orElse(PaymentType.CASH);
+
+        data.setMoneyType(paymentType.getCode());
+        data.setType(SaleChargeGeneral.valueOf(order.getSaleCharge()).getCode());
+        data.setSum(0);
+        val tags = new ArrayList<FiscalProperty>();
+        data.setFiscprops(tags);
+        val info = getLastStatus();
+        // Registration number, Tax identifier, Tax Variant
+        tags.add(new FiscalProperty().setTag(1037).setValue(info.getRegNumber()));
+        tags.add(new FiscalProperty().setTag(1018).setValue(info.getInn()));
+        tags.add(new FiscalProperty().setTag(1055).setValue(info.getTaxVariant()));
+        // check total
+        order.getPayments().stream()
+                .map(payment -> new FiscalProperty()
+                        .setTag(PaymentType.valueOf(payment.getPaymentType()).getTag())
+                        .setValue(payment.getAmount())
+                )
+                .forEach(tags::add);
+
+        // Sale Charge
+        tags.add(new FiscalProperty().setTag(1054).setValue(SaleCharge.valueOf(order.getSaleCharge()).getCode()));
+        if (order.getCorrection() == null) {
+            throw new FrwsException(
+                    String.format(
+                            "Correction cannot be empty for ORDER_ID=%s, ISSUE_ID=%s"
+                            , order.get_id()
+                            , issueId
+                    )
+            );
         }
+        val correction = order.getCorrection();
+        tags.add(new FiscalProperty().setTag(1173).setValue("SELF_MADE".equals(correction.getCorrectionType()) ? 0 : 1));
+        FiscalProperty corrTag = new FiscalProperty().setTag(1174).setFiscprops(new ArrayList<>());
+        corrTag.getFiscprops().add(new FiscalProperty().setTag(1177).setValue(correction.getDescription()));
+        corrTag.getFiscprops().add(new FiscalProperty().setTag(1178).setValue(
+                LocalDate.parse(correction.getDocumentDate()).atStartOfDay().format(RFC_1123_DATE_TIME))
+        );
+        corrTag.getFiscprops().add(new FiscalProperty().setTag(1179).setValue(correction.getDocumentNumber()));
+        tags.add(corrTag);
+        tags.add(new FiscalProperty().setTag(1060).setValue("www.nalog.ru"));
+        Map<String, Object> request = new HashMap<>();
+        request.put("document", doc);
+        return request;
     }
 
     /**
@@ -246,7 +344,7 @@ public class UmkaFiscalGateway implements FiscalGateway {
      * Calculates status mode code.
      *
      * @param isOpen is session open
-     * @param ts timestamp
+     * @param ts     timestamp
      * @param opened date session opened
      * @return status mode code
      */
