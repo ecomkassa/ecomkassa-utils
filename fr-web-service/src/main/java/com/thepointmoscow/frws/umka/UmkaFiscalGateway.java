@@ -258,11 +258,13 @@ public class UmkaFiscalGateway implements FiscalGateway {
         FiscalProperty corrTag = new FiscalProperty().setTag(1174).setFiscprops(new ArrayList<>());
         corrTag.getFiscprops().add(new FiscalProperty().setTag(1177).setValue(correction.getDescription()));
         corrTag.getFiscprops().add(new FiscalProperty().setTag(1178).setValue(
-                LocalDate.parse(correction.getDocumentDate()).atStartOfDay().format(RFC_1123_DATE_TIME))
+                LocalDate.parse(correction.getDocumentDate())
+                        .atStartOfDay()
+                        .atZone(ZoneId.systemDefault())
+                        .format(RFC_1123_DATE_TIME))
         );
         corrTag.getFiscprops().add(new FiscalProperty().setTag(1179).setValue(correction.getDocumentNumber()));
         tags.add(corrTag);
-        tags.add(new FiscalProperty().setTag(1060).setValue("www.nalog.ru"));
         Map<String, Object> request = new HashMap<>();
         request.put("document", doc);
         return request;
