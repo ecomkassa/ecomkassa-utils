@@ -2,10 +2,7 @@ package com.thepointmoscow.frws.umka;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.thepointmoscow.frws.FiscalGateway;
-import com.thepointmoscow.frws.Order;
-import com.thepointmoscow.frws.RegistrationResult;
-import com.thepointmoscow.frws.StatusResult;
+import com.thepointmoscow.frws.*;
 import com.thepointmoscow.frws.exceptions.FrwsException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -35,8 +32,6 @@ import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 public class UmkaFiscalGateway implements FiscalGateway {
 
     private static final int SESSION_EXPIRED_ERROR = 136;
-    private static final int CLEARING_TYPE = 4;
-    private static final int CLEARING_OBJECT_COMMODITY = 1;
     private static final int SUMMARY_AMOUNT_DENOMINATOR = 1000;
     // Status modes.
     static final int STATUS_OPEN_SESSION = 2;
@@ -185,17 +180,28 @@ public class UmkaFiscalGateway implements FiscalGateway {
         tags.add(new FiscalProperty().setTag(1008).setValue(order.getCustomer().getId()));
 
         for (Order.Item i : order.getItems()) {
-            val item = new FiscalProperty().setTag(1059).setFiscprops(new ArrayList<>());
-            item.getFiscprops().add(new FiscalProperty().setTag(1214).setValue(CLEARING_TYPE));
-            item.getFiscprops().add(new FiscalProperty().setTag(1212).setValue(CLEARING_OBJECT_COMMODITY));
-            item.getFiscprops().add(new FiscalProperty().setTag(1030).setValue(i.getName()));
-            item.getFiscprops().add(new FiscalProperty().setTag(1079).setValue(i.getPrice()));
-            item.getFiscprops().add(new FiscalProperty().setTag(1023)
+            List<FiscalProperty> fiscprops = new LinkedList<>();
+            PaymentMethod paymentMethod = i.paymentMethod();
+            fiscprops.add(
+                    new FiscalProperty()
+                            .setTag(paymentMethod.getFfdTag())
+                            .setValue(paymentMethod.getCode())
+            );
+            PaymentObject paymentObject = i.paymentObject();
+            fiscprops.add(
+                    new FiscalProperty()
+                            .setTag(paymentObject.getFfdTag())
+                            .setValue(paymentObject.getCode())
+            );
+            fiscprops.add(new FiscalProperty().setTag(1030).setValue(i.getName()));
+            fiscprops.add(new FiscalProperty().setTag(1079).setValue(i.getPrice()));
+            fiscprops.add(new FiscalProperty().setTag(1023)
                     .setValue(String.format("%.3f", ((double) i.getAmount()) / SUMMARY_AMOUNT_DENOMINATOR)));
-            item.getFiscprops().add(new FiscalProperty().setTag(1199)
+            fiscprops.add(new FiscalProperty().setTag(1199)
                     .setValue(ItemVatType.valueOf(i.getVatType()).getCode()));
             val total = i.getAmount() * i.getPrice() / SUMMARY_AMOUNT_DENOMINATOR;
-            item.getFiscprops().add(new FiscalProperty().setTag(1043).setValue(total));
+            fiscprops.add(new FiscalProperty().setTag(1043).setValue(total));
+            val item = new FiscalProperty().setTag(1059).setFiscprops(fiscprops);
             tags.add(item);
         }
         tags.add(new FiscalProperty().setTag(1060).setValue("www.nalog.ru"));

@@ -3,9 +3,12 @@ package com.thepointmoscow.frws;
 import com.google.common.base.Strings;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Data
 @Accessors(chain = true)
@@ -53,11 +56,46 @@ public class Order {
 
     @Data
     @Accessors(chain = true)
+    @Slf4j
     public static class Item {
         private String name;
         private Long price;
         private Long amount;
         private String vatType;
+        private String paymentMethod;
+        private String paymentObject;
+
+        public PaymentMethod paymentMethod() {
+            val paymentMethodDefault = PaymentMethod.FULL_PAYMENT;
+            try {
+                return Optional.ofNullable(paymentMethod)
+                        .map(PaymentMethod::valueOf)
+                        .orElse(paymentMethodDefault);
+            } catch (Exception e) {
+                log.warn(
+                        "Cannot parse a payment method from '{}', switched to the default '{}'"
+                        , paymentMethod
+                        , paymentMethodDefault
+                );
+                return paymentMethodDefault;
+            }
+        }
+
+        public PaymentObject paymentObject() {
+            val paymentObjectDefault = PaymentObject.COMMODITY;
+            try {
+                return Optional.ofNullable(paymentObject)
+                        .map(PaymentObject::valueOf)
+                        .orElse(paymentObjectDefault);
+            } catch (Exception e) {
+                log.warn(
+                        "Cannot parse a payment object from '{}', switched to the default '{}'"
+                        , paymentObject
+                        , paymentObjectDefault
+                );
+                return paymentObjectDefault;
+            }
+        }
     }
 
     @Data
