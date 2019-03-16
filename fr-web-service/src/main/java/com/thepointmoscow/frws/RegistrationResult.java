@@ -29,7 +29,8 @@ public class RegistrationResult extends StatusResult {
                 .setSubModeFR(sr.getSubModeFR())
                 .setSerialNumber(sr.getSerialNumber())
                 .setStatusMessage(sr.getStatusMessage())
-                .setAppVersion(sr.getAppVersion());
+                .setAppVersion(sr.getAppVersion())
+                .setStatus(sr.getStatus());
         return this;
     }
 

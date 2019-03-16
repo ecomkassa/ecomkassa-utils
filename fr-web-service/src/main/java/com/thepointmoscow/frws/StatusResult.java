@@ -1,5 +1,6 @@
 package com.thepointmoscow.frws;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -29,6 +30,7 @@ public class StatusResult {
     private int subModeFR;
     private String statusMessage;
     private String appVersion;
+    private JsonNode status;
 
     /**
      * Checks against the session opening.

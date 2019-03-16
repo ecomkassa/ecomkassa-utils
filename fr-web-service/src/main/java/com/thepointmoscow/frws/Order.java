@@ -64,6 +64,10 @@ public class Order {
         private String vatType;
         private String paymentMethod;
         private String paymentObject;
+        private String measurementUnit;
+        private String userData;
+        private SupplierInfo supplier;
+        private AgentInfo agent;
 
         public PaymentMethod paymentMethod() {
             val paymentMethodDefault = PaymentMethod.FULL_PAYMENT;

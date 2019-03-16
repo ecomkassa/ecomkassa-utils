@@ -14,12 +14,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.time.*;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static com.thepointmoscow.frws.AgentType.AGENT_TYPE_FFD_TAG;
 import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
+import static java.util.Optional.ofNullable;
 
 /**
  * Fiscal gateway using "umka" devices.
@@ -105,8 +106,8 @@ public class UmkaFiscalGateway implements FiscalGateway {
                     values.put(tag, current.get("value").asInt());
                 }
             }
-            val documentNumber = Optional.ofNullable(values.get(1040));
-            val sessionCheck = Optional.ofNullable(values.get(1042));
+            val documentNumber = ofNullable(values.get(1040));
+            val sessionCheck = ofNullable(values.get(1042));
             if (Stream.of(regDate, signature, documentNumber, sessionCheck)
                     .anyMatch(opt -> !opt.isPresent())) {
                 throw new FrwsException(
@@ -180,28 +181,76 @@ public class UmkaFiscalGateway implements FiscalGateway {
         tags.add(new FiscalProperty().setTag(1008).setValue(order.getCustomer().getId()));
 
         for (Order.Item i : order.getItems()) {
-            List<FiscalProperty> fiscprops = new LinkedList<>();
+            List<FiscalProperty> itemTags = new LinkedList<>();
             PaymentMethod paymentMethod = i.paymentMethod();
-            fiscprops.add(
+            itemTags.add(
                     new FiscalProperty()
                             .setTag(paymentMethod.getFfdTag())
                             .setValue(paymentMethod.getCode())
             );
             PaymentObject paymentObject = i.paymentObject();
-            fiscprops.add(
+            itemTags.add(
                     new FiscalProperty()
                             .setTag(paymentObject.getFfdTag())
                             .setValue(paymentObject.getCode())
             );
-            fiscprops.add(new FiscalProperty().setTag(1030).setValue(i.getName()));
-            fiscprops.add(new FiscalProperty().setTag(1079).setValue(i.getPrice()));
-            fiscprops.add(new FiscalProperty().setTag(1023)
+            itemTags.add(new FiscalProperty().setTag(1030).setValue(i.getName()));
+            itemTags.add(new FiscalProperty().setTag(1079).setValue(i.getPrice()));
+            itemTags.add(new FiscalProperty().setTag(1023)
                     .setValue(String.format("%.3f", ((double) i.getAmount()) / SUMMARY_AMOUNT_DENOMINATOR)));
-            fiscprops.add(new FiscalProperty().setTag(1199)
+            itemTags.add(new FiscalProperty().setTag(1199)
                     .setValue(ItemVatType.valueOf(i.getVatType()).getCode()));
             val total = i.getAmount() * i.getPrice() / SUMMARY_AMOUNT_DENOMINATOR;
-            fiscprops.add(new FiscalProperty().setTag(1043).setValue(total));
-            val item = new FiscalProperty().setTag(1059).setFiscprops(fiscprops);
+            itemTags.add(new FiscalProperty().setTag(1043).setValue(total));
+            ofNullable(i.getMeasurementUnit())
+                    .map(it -> new FiscalProperty().setTag(1197).setValue(it))
+                    .ifPresent(itemTags::add);
+            ofNullable(i.getUserData())
+                    .map(it -> new FiscalProperty().setTag(1191).setValue(it))
+                    .ifPresent(itemTags::add);
+            // supplier information
+            ofNullable(i.getSupplier()).ifPresent(suppInfo -> {
+                ofNullable(suppInfo.getSupplierPhones()).ifPresent(
+                        phones -> phones.forEach(phone -> itemTags.add(
+                                new FiscalProperty().setTag(1171).setValue(phone))
+                        )
+                );
+                ofNullable(suppInfo.getSupplierName()).ifPresent(
+                        it -> itemTags.add(new FiscalProperty().setTag(1125).setValue(it))
+                );
+                ofNullable(suppInfo.getSupplierInn()).ifPresent(
+                        it -> itemTags.add(new FiscalProperty().setTag(1126).setValue(it))
+                );
+            });
+            // agent information
+            ofNullable(i.getAgent()).ifPresent(agent -> {
+                ofNullable(agent.getAgentType())
+                        .map(agentType -> new FiscalProperty().setTag(AGENT_TYPE_FFD_TAG).setValue(agentType.getFfdCode()))
+                        .ifPresent(itemTags::add);
+                ofNullable(agent.getPayingOperation())
+                        .map(operation -> new FiscalProperty().setTag(1044).setValue(operation))
+                        .ifPresent(itemTags::add);
+                ofNullable(agent.getPayingPhones())
+                        .map(phones -> phones.stream().map(phone -> new FiscalProperty().setTag(1073).setValue(phone)))
+                        .ifPresent(phoneProps -> phoneProps.forEach(itemTags::add));
+                ofNullable(agent.getReceiverPhones())
+                        .map(phones -> phones.stream().map(phone -> new FiscalProperty().setTag(1074).setValue(phone)))
+                        .ifPresent(phoneProps -> phoneProps.forEach(itemTags::add));
+                ofNullable(agent.getTransferPhones())
+                        .map(phones -> phones.stream().map(phone -> new FiscalProperty().setTag(1075).setValue(phone)))
+                        .ifPresent(phoneProps -> phoneProps.forEach(itemTags::add));
+                ofNullable(agent.getTransferName())
+                        .map(value -> new FiscalProperty().setTag(1026).setValue(value))
+                        .ifPresent(itemTags::add);
+                ofNullable(agent.getTransferAddress())
+                        .map(value -> new FiscalProperty().setTag(1005).setValue(value))
+                        .ifPresent(itemTags::add);
+                ofNullable(agent.getTransferInn())
+                        .map(operation -> new FiscalProperty().setTag(1016).setValue(operation))
+                        .ifPresent(itemTags::add);
+            });
+
+            val item = new FiscalProperty().setTag(1059).setFiscprops(itemTags);
             tags.add(item);
         }
         tags.add(new FiscalProperty().setTag(1060).setValue("www.nalog.ru"));
@@ -311,41 +360,43 @@ public class UmkaFiscalGateway implements FiscalGateway {
         JsonNode response;
         try {
             response = mapper.readTree(responseStr);
-        } catch (IOException e) {
-            return result.setErrorCode(-1);
+
+            val status = ofNullable(response.get("cashboxStatus"));
+            result.setErrorCode(0);
+            result.setCurrentDocNumber(
+                    status.map(x -> x.path("fsStatus").path("lastDocNumber")).filter(JsonNode::isInt).map(JsonNode::asInt)
+                            .orElse(-1));
+            result.setCurrentSession(
+                    status.map(x -> x.path("cycleNumber")).filter(JsonNode::isInt).map(JsonNode::asInt).orElse(-1));
+            final Optional<OffsetDateTime> timestamp = status.map(x -> x.get("dt").asText())
+                    .map(x -> OffsetDateTime.parse(x, RFC_1123_DATE_TIME));
+
+            result.setFrDateTime(timestamp.map(OffsetDateTime::toLocalDateTime).orElse(LocalDateTime.MIN));
+            result.setOnline(true);
+            final String inn = status.map(x -> x.path("userInn")).filter(node -> !node.isMissingNode())
+                    .map(JsonNode::asText).orElse("");
+            result.setInn(inn);
+            final String regNumber = status.map(x -> x.get("regNumber").asText()).orElse("");
+            final int taxVariant = status.map(x -> x.path("taxes")).filter(JsonNode::isInt).map(JsonNode::asInt).orElse(0);
+
+            boolean isOpen = status.map(x -> x.path("fsStatus").path("cycleIsOpen"))
+                    .map(x -> x.isInt() && x.asInt() != 0).orElse(false);
+
+            final Optional<OffsetDateTime> opened = status.map(x -> x.path("cycleOpened"))
+                    .filter(JsonNode::isTextual)
+                    .map(x -> OffsetDateTime.parse(x.asText(), RFC_1123_DATE_TIME));
+
+            result.setModeFR(statusMode(isOpen, timestamp, opened));
+            result.setSubModeFR(0);
+            result.setSerialNumber(status.map(x -> x.get("serial").asText()).orElse(""));
+            result.setStatusMessage(ofNullable(response.path("message")).map(JsonNode::asText).orElse(""));
+            result.setStatus(response);
+            this.lastStatus = new RegInfo(inn, taxVariant, regNumber);
+            return result;
+        } catch (Exception e) {
+            log.error("Error while reading a cashbox status. {}", e.getMessage());
+            throw new FrwsException(e);
         }
-        val status = Optional.ofNullable(response.get("cashboxStatus"));
-        result.setErrorCode(0);
-        result.setCurrentDocNumber(
-                status.map(x -> x.path("fsStatus").path("lastDocNumber")).filter(JsonNode::isInt).map(JsonNode::asInt)
-                        .orElse(-1));
-        result.setCurrentSession(
-                status.map(x -> x.path("cycleNumber")).filter(JsonNode::isInt).map(JsonNode::asInt).orElse(-1));
-        final Optional<OffsetDateTime> timestamp = status.map(x -> x.get("dt").asText())
-                .map(x -> OffsetDateTime.parse(x, RFC_1123_DATE_TIME));
-
-        result.setFrDateTime(timestamp.map(OffsetDateTime::toLocalDateTime).orElse(LocalDateTime.MIN));
-        result.setOnline(true);
-        final String inn = status.map(x -> x.path("userInn")).filter(node -> !node.isMissingNode())
-                .map(JsonNode::asText).orElse("");
-        result.setInn(inn);
-        final String regNumber = status.map(x -> x.get("regNumber").asText()).orElse("");
-        final int taxVariant = status.map(x -> x.path("taxes")).filter(JsonNode::isInt).map(JsonNode::asInt).orElse(0);
-
-        boolean isOpen = status.map(x -> x.path("fsStatus").path("cycleIsOpen"))
-                .map(x -> x.isInt() && x.asInt() != 0).orElse(false);
-
-        final Optional<OffsetDateTime> opened = status.map(x -> x.path("cycleOpened"))
-                .filter(JsonNode::isTextual)
-                .map(x -> OffsetDateTime.parse(x.asText(), RFC_1123_DATE_TIME));
-
-        result.setModeFR(statusMode(isOpen, timestamp, opened));
-        result.setSubModeFR(0);
-        result.setSerialNumber(status.map(x -> x.get("serial").asText()).orElse(""));
-        result.setStatusMessage(Optional.ofNullable(response.path("message")).map(JsonNode::asText).orElse(""));
-
-        this.lastStatus = new RegInfo(inn, taxVariant, regNumber);
-        return result;
     }
 
     /**
