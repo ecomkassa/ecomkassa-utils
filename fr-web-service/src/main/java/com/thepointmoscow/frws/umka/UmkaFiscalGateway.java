@@ -210,44 +210,48 @@ public class UmkaFiscalGateway implements FiscalGateway {
                     .ifPresent(itemTags::add);
             // supplier information
             ofNullable(i.getSupplier()).ifPresent(suppInfo -> {
+                List<FiscalProperty> suppProps = new LinkedList<>();
                 ofNullable(suppInfo.getSupplierPhones()).ifPresent(
-                        phones -> phones.forEach(phone -> itemTags.add(
-                                new FiscalProperty().setTag(1171).setValue(phone))
+                        phones -> phones.forEach(
+                                phone -> suppProps.add(new FiscalProperty().setTag(1171).setValue(phone))
                         )
                 );
                 ofNullable(suppInfo.getSupplierName()).ifPresent(
-                        it -> itemTags.add(new FiscalProperty().setTag(1125).setValue(it))
+                        it -> suppProps.add(new FiscalProperty().setTag(1225).setValue(it))
                 );
                 ofNullable(suppInfo.getSupplierInn()).ifPresent(
-                        it -> itemTags.add(new FiscalProperty().setTag(1126).setValue(it))
+                        it -> suppProps.add(new FiscalProperty().setTag(1226).setValue(it))
                 );
+                itemTags.add(new FiscalProperty().setTag(1224).setFiscprops(suppProps));
             });
             // agent information
             ofNullable(i.getAgent()).ifPresent(agent -> {
                 ofNullable(agent.getAgentType())
                         .map(agentType -> new FiscalProperty().setTag(AGENT_TYPE_FFD_TAG).setValue(agentType.getFfdCode()))
                         .ifPresent(itemTags::add);
+                List<FiscalProperty> agentProps = new LinkedList<>();
                 ofNullable(agent.getPayingOperation())
                         .map(operation -> new FiscalProperty().setTag(1044).setValue(operation))
-                        .ifPresent(itemTags::add);
+                        .ifPresent(agentProps::add);
                 ofNullable(agent.getPayingPhones())
                         .map(phones -> phones.stream().map(phone -> new FiscalProperty().setTag(1073).setValue(phone)))
-                        .ifPresent(phoneProps -> phoneProps.forEach(itemTags::add));
+                        .ifPresent(phoneProps -> phoneProps.forEach(agentProps::add));
                 ofNullable(agent.getReceiverPhones())
                         .map(phones -> phones.stream().map(phone -> new FiscalProperty().setTag(1074).setValue(phone)))
-                        .ifPresent(phoneProps -> phoneProps.forEach(itemTags::add));
+                        .ifPresent(phoneProps -> phoneProps.forEach(agentProps::add));
                 ofNullable(agent.getTransferPhones())
                         .map(phones -> phones.stream().map(phone -> new FiscalProperty().setTag(1075).setValue(phone)))
-                        .ifPresent(phoneProps -> phoneProps.forEach(itemTags::add));
+                        .ifPresent(phoneProps -> phoneProps.forEach(agentProps::add));
                 ofNullable(agent.getTransferName())
                         .map(value -> new FiscalProperty().setTag(1026).setValue(value))
-                        .ifPresent(itemTags::add);
+                        .ifPresent(agentProps::add);
                 ofNullable(agent.getTransferAddress())
                         .map(value -> new FiscalProperty().setTag(1005).setValue(value))
-                        .ifPresent(itemTags::add);
+                        .ifPresent(agentProps::add);
                 ofNullable(agent.getTransferInn())
                         .map(operation -> new FiscalProperty().setTag(1016).setValue(operation))
-                        .ifPresent(itemTags::add);
+                        .ifPresent(agentProps::add);
+                itemTags.add(new FiscalProperty().setTag(1223).setFiscprops(agentProps));
             });
 
             val item = new FiscalProperty().setTag(1059).setFiscprops(itemTags);

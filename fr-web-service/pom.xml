@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>fr-web-service</artifactId>
-    <version>0.3.3</version>
+    <version>0.3.4</version>
 
     <name>Fiscal registrar Web service</name>
 

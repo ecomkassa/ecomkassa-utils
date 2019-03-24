@@ -16,7 +16,7 @@ public enum AgentType {
     /**
      * Tag number.
      */
-    public static final int AGENT_TYPE_FFD_TAG = 1057;
+    public static final int AGENT_TYPE_FFD_TAG = 1222;
 
     @Getter
     private final int ffdCode;
