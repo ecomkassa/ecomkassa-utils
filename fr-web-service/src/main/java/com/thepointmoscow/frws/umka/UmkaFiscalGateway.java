@@ -178,7 +178,9 @@ public class UmkaFiscalGateway implements FiscalGateway {
         tags.add(new FiscalProperty().setTag(1054)
                 .setValue(SaleCharge.valueOf(order.getSaleCharge()).getCode()));
         // customer id: email or phone
-        tags.add(new FiscalProperty().setTag(1008).setValue(order.getCustomer().getId()));
+        ofNullable(order.getCustomer().getId())
+                .map(customer -> new FiscalProperty().setTag(1008).setValue(customer))
+                .ifPresent(tags::add);
 
         for (Order.Item i : order.getItems()) {
             List<FiscalProperty> itemTags = new LinkedList<>();
