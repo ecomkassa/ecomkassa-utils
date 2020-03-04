@@ -1,5 +1,6 @@
 package com.thepointmoscow.itemsservicefake;
 
+import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,6 +11,7 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import java.math.BigDecimal;
 
+@ApiModel
 @Data
 @Entity
 @Table(name = "items")
