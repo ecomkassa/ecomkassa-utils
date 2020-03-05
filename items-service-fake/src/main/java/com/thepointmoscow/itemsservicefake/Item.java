@@ -1,11 +1,17 @@
 package com.thepointmoscow.itemsservicefake;
 
+import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import java.math.BigDecimal;
 
+@ApiModel
 @Data
 @Entity
 @Table(name = "items")
@@ -14,25 +20,21 @@ import javax.persistence.*;
 public class Item {
     @Id
     @Column(name = "item_id")
-    private String itemId;
+    private Long itemId;
     @Column(name = "name")
     private String name;
     @Column(name = "sku")
     private String sku;
-    @Column(name = "size")
-    private String size;
 
-    /**
-     * The price is intentionally set equals to a one kopeck.
-     */
-    // @Column(name = "price")
-    @Transient
-    private Integer price = 1;
+    @Column(name = "price", columnDefinition = "decimal(14,2)")
+    private BigDecimal price;
 
-    @Transient
-    private final String vatType = "VAT_18PCT";
+    @Column(name = "vat_type")
+    private String vatType;
 
-    public Integer getPrice() {
-        return price;
-    }
+    @Column(name = "payment_object")
+    private String paymentObject;
+
+    @Column(name = "tax_identity")
+    private String taxIdentity;
 }

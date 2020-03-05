@@ -13,10 +13,10 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 @SpringBootApplication(scanBasePackages = "com.thepointmoscow.itemsservicefake")
 @Configuration
 @EnableSwagger2
-public class App {
+public class ItemsServiceApp {
 
     public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
+        SpringApplication.run(ItemsServiceApp.class, args);
     }
 
     @Bean

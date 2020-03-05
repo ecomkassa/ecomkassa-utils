@@ -3,19 +3,32 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9 http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
     <changeSet id="2017-08-04T10:44:57+03:00" author="unlocker">
         <createTable tableName="items">
-            <column name="item_id" type="varchar(30)">
+            <column name="item_id" type="bigint" autoIncrement="true">
                 <constraints primaryKey="true" primaryKeyName="pk_items"/>
             </column>
-            <column name="sku" type="varchar(30)">
+            <column name="sku" type="varchar(64)">
                 <constraints nullable="false"/>
             </column>
             <column name="name" type="varchar(255)"/>
-            <column name="size" type="varchar(10)"/>
-            <column name="price" type="int"/>
+            <column name="price" type="decimal(14,2)"/>
+            <column name="payment_object" type="varchar(32)" defaultValue="commodity"/>
+            <column name="vat_type" type="varchar(16)" defaultValue="vat20"/>
+            <column name="tax_identity" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
 
+        <addUniqueConstraint tableName="items" columnNames="sku,tax_identity" constraintName="ak_items_sku_taxid"/>
+
+        <!-- 2466276880 Еврофорточка -->
         <loadData tableName="items"
-                  file="classpath:/db/changelog/adidas-items.csv"
+                  file="classpath:/db/changelog/2466276880.csv"
+                  encoding="UTF-8">
+        </loadData>
+
+        <!-- 280110813693 ИП Иванов Владислав Алексеевич -->
+        <loadData tableName="items"
+                  file="classpath:/db/changelog/280110813693.csv"
                   encoding="UTF-8">
         </loadData>
 
