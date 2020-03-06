@@ -32,5 +32,11 @@
                   encoding="UTF-8">
         </loadData>
 
+        <!-- 7708317992 Зе Поинт (тест) -->
+        <loadData tableName="items"
+                  file="classpath:/db/changelog/7708317992.csv"
+                  encoding="UTF-8">
+        </loadData>
+
     </changeSet>
 </databaseChangeLog>
